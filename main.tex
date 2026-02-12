@@ -1,0 +1,180 @@
+\documentclass[table,xcdraw,12pt]{article}
+
+\newcommand{\shorthead}{The LLM Policy Cliff}
+\usepackage{aiarticle}
+
+% =============================================================
+% % 覆盖 aiarticle.sty 中的字体设定
+% \makeatletter
+% \renewcommand{\normalsize}{%
+%    \@setfontsize\normalsize\@xipt{12\p@}%
+%    \abovedisplayskip      8\p@ \@plus 2\p@ \@minus 5\p@
+%    \abovedisplayshortskip \z@ \@plus 3\p@
+%    \belowdisplayskip      \abovedisplayskip
+%    \belowdisplayshortskip 5\p@ \@plus 3\p@ \@minus 3\p@
+% }
+% \makeatother
+% =============================================================
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{lipsum}
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath, amsthm, amssymb}
+\usepackage{mathrsfs} % For \mathscr
+
+% \usepackage[table,xcdraw]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning,fit,calc,matrix,matrix.skeleton}
+
+% Citation-related commands
+\usepackage{natbib}
+% \setcitestyle{square,numbers,comma}
+\setcitestyle{authoryear,open={(},close={)},semicolon} 
+
+\usepackage{multirow}
+\usepackage{array}
+\newcolumntype{P}[1]{>{\centering\arraybackslash}m{#1}}
+\usepackage{wrapfig}
+
+\usepackage{subcaption}
+
+\usepackage{listings}
+\lstset{
+basicstyle=\small\ttfamily,
+columns=flexible,
+breaklines=true
+}
+
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\raonote}[1]{\textcolor{blue}{ #1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \usepackage{cochineal}
+% \usepackage[T1]{fontenc}
+% \usepackage{parskip} 
+% \usepackage{bera}
+
+% \usepackage[scale=.95,type1]{cabin}
+% \usepackage[zerostyle=c,scaled=.94]{newtxtt}
+% % \usepackage[cal=boondoxo]{mathalfa}
+% \usepackage{microtype}
+
+% \usepackage{subcaption}  % 推荐使用这个宏包
+% \usepackage{caption}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Define theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Basic Macros
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+% \newcommand{\Prob}{\mathcal{P}} % Probability measures
+\newcommand{\B}{\mathcal{B}} % Borel sigma-algebra
+\newcommand{\Cont}{\mathcal{C}} % Continuous functions
+\newcommand{\Bounded}{\mathcal{B}d} % Bounded functions/measurable space
+\newcommand{\RewardSpace}{\mathcal{R}}
+\newcommand{\PolicySpace}{\mathcal{P}}
+\newcommand{\StateSpace}{S}
+\newcommand{\ActionSpace}{A}
+\newcommand{\TransKernel}{P}
+\newcommand{\RewardFunc}{R}
+\newcommand{\Policy}{\pi}
+\newcommand{\OptPolicy}{\pi^*}
+\newcommand{\ValueFunc}{V}
+\newcommand{\QFunc}{Q}
+\newcommand{\OptQFunc}{Q^*}
+\newcommand{\BellmanOp}{T}
+\newcommand{\Argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\SupNorm}[1]{\|#1\|_{\infty}}
+\newcommand{\Indicator}[1]{\mathbb{I}\{#1\}} % Indicator function
+\newcommand{\MetricAction}{d_{\ActionSpace}} % Metric on ActionSpace
+\newcommand{\CompactSubsets}{\mathcal{K}} % Space of non-empty compact subsets
+\newcommand{\Hausdorff}{d_H} % Hausdorff metric
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\KL}{\mathcal{D}_{\mathrm{KL}}}
+\newcommand{\basePolicy}{\pi_{\text{base}}}
+\newcommand{\optPolicySet}{\Pi^*}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{The Policy Cliff: A Theoretical Analysis of Reward-Policy Maps in Large Language Models}
+
+
+\author{%
+   Xingcheng Xu \\
+   Shanghai Artificial Intelligence Laboratory \\
+   \texttt{xingcheng.xu18@gmail.com} %\\
+   % \And
+   % XX \\
+   % XX \\
+   % \texttt{xx@xx.xx} \\
+}
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Reinforcement learning (RL) plays a crucial role in shaping the behavior of large language and reasoning models (LLMs/LRMs). However, it often produces brittle and unstable policies, leading to critical failures such as spurious reasoning, deceptive alignment, and instruction disobedience that undermine the trustworthiness and safety of LLMs/LRMs. Currently, these issues lack a unified theoretical explanation and are typically addressed using ad-hoc heuristics. This paper presents a rigorous mathematical framework for analyzing the stability of the mapping from a reward function to the optimal policy. We show that policy brittleness often stems from non-unique optimal actions, a common occurrence when multiple valid traces exist in a reasoning task. This theoretical lens provides a unified explanation for a range of seemingly disparate failures, reframing them as rational outcomes of optimizing rewards that may be incomplete or noisy, especially in the presence of action degeneracy. We extend this analysis from the fundamental single-reward setting to the more realistic multi-reward RL across diverse domains, showing how stability is governed by an "effective reward" aggregation mechanism. We also prove that entropy regularization restores policy stability at the cost of increased stochasticity. Our framework provides a unified explanation for recent empirical findings on deceptive reasoning, instruction-following trade-offs, and RLHF-induced sophistry, and is further validated through perturbation experiments in multi-reward RL. This work advances policy-stability analysis from empirical heuristics towards a principled theory, offering essential insights for designing safer and more trustworthy AI systems.
+\end{abstract}
+
+\keywords{Large language models (LLM), reinforcement learning (RL), RLHF, RLVR, alignment, reasoning, emergent misalignment, AI safety, reward-policy map, continuity analysis}
+
+\setcounter{footnote}{0}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% Main Body %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\tableofcontents
+
+\vspace{0.8cm}
+
+% --- start of the quote ---
+\begin{quote}
+    \itshape
+    "Human-centric LLMs typically optimise for rewards based on human prejudgement: an expert observes the agent’s action and decides whether it is a good action, or picks the best agent action among multiple alternatives. ... means that they are not directly grounded in the reality of the world."
+    \par\raggedleft
+    --- \cite{silver2025welcome}
+\end{quote}
+% --- end of the quote ---
+
+\input{sections/1-intro}
+\input{sections/2-rl-theory}
+\input{sections/3-rl-llm-app}
+\input{sections/4-multi-rm-rl}
+\input{sections/5-empirical}
+\input{sections/6-discussion}
+\input{sections/7-conclusion}
+\input{sections/98-acknowledgements}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% Reference %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle{plainnat}
+\bibliography{main}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% Appendix %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{sections/99-appendix}
+
+\end{document}

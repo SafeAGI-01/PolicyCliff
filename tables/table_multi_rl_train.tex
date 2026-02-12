@@ -1,0 +1,39 @@
+\begin{table}[h!]
+\centering
+\caption{Training hyperparameters of the experiments in Sectuion~\ref{subsec:multi-rl-exp}}
+\begin{tabular}{lc}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+rollout\_batch\_size & 128 \\
+train\_batch\_size & 64 \\
+micro\_rollout\_batch\_size & 4 \\
+micro\_train\_batch\_size & 2 \\
+max\_len & 9000 \\
+prompt\_max\_len & 4096 \\
+generate\_max\_len & 4096 \\
+advantage\_estimator & group\_norm \\
+n\_samples\_per\_prompt & 8 \\
+temperature & 1 \\
+vllm\_sync\_backend & nccl \\
+apply\_chat\_template & true \\
+use\_kl\_loss & true \\
+init\_kl\_coef & 0.001 \\
+kl\_estimator & k3 \\
+freeze\_prefix & true \\
+lr\_warmup\_ratio & 0 \\
+actor\_learning\_rate & 1e-6 \\
+bf16 & true \\
+max\_epochs & 1 \\
+eps\_clip & 0.2 \\
+value\_clip & 0.2 \\
+max\_norm & 1 \\
+adam\_betas & [0.9, 0.95] \\
+flash\_attn & true \\
+zero\_stage & 3 \\
+adam\_offload & true \\
+colocate\_actor\_ref & true \\
+\bottomrule
+\end{tabular}
+\label{tab:multi-rl-train-config}
+\end{table}

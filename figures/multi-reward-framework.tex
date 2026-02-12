@@ -1,0 +1,69 @@
+\begin{figure}[h!]
+  \centering
+  \begin{tikzpicture}[
+    font=\sffamily,
+    node distance=0.7cm and 1.5cm,
+    >=Latex,
+    every node/.style={align=center, rounded corners=3pt, thick},
+    data/.style={draw, fill=gray!15, minimum width=2cm, minimum height=1cm, font=\small},
+    policy/.style={draw, fill=blue!15, minimum width=2.5cm, minimum height=6cm, font=\normalsize},
+    reward/.style={draw, fill=orange!15, minimum width=2cm, minimum height=1cm, font=\small},
+    obj/.style={draw, fill=red!15, minimum width=2cm, minimum height=1cm, font=\small}
+  ]
+
+    % 中心LLM节点 (居中调整)
+    \node[policy] (LLM) at (0,-0.75) {\textbf{LLM}};
+
+    % 左侧数据节点
+    \node[data,left=of LLM,yshift=2.5cm] (D1) {$\mathcal{D}_1$};
+    \node[data,left=of LLM] (D2) {$\mathcal{D}_2$};
+    \node[below=0.35cm of D2,font=\normalsize] (dotsD) {$\vdots$};
+    \node[data,below=0.35cm of dotsD] (DN) {$\mathcal{D}_N$};
+
+    % 右侧奖励节点
+    \node[reward,right=of LLM,yshift=2.5cm] (R1) {$\RewardFunc_1$};
+    \node[reward,right=of LLM] (R2) {$\RewardFunc_2$};
+    \node[below=0.35cm of R2,font=\normalsize] (dotsR) {$\vdots$};
+    \node[reward,below=0.35cm of dotsR] (RN) {$\RewardFunc_N$};
+
+    % 目标节点
+    \node[obj,right=1.5cm of R2] (J) {$J(\pi)$};
+
+    % % 箭头：数据到LLM
+    % \foreach \d in {D1,D2,DN}{
+    %   \draw[->,thick] (\d.east)--(LLM.west);
+    % }
+    % \node[font=\scriptsize,above] at ($(D2.east)!0.5!(LLM.west)$) {prompts};
+
+    % % 箭头：LLM到奖励（沿箭头方向标注）
+    % \foreach \r in {R1,R2,RN}{
+    %   \draw[->,thick] (LLM.east)--(\r.west) node[midway,above,sloped,font=\scriptsize] {rollout};
+    % }
+
+     % 箭头：数据到LLM（平行三条线）
+    \draw[->,thick] (D1.east) -- ([yshift=2.5cm]LLM.west)
+    node[midway,above,sloped,font=\small] {prompts};
+    \draw[->,thick] (D2.east) -- (LLM.west)
+    node[midway,above,sloped,font=\small] {prompts};
+    \draw[->,thick] (DN.east) -- ([yshift=-2.5cm]LLM.west)
+    node[midway,above,sloped,font=\small] {prompts};
+
+    % 箭头：LLM到奖励（平行三条线）
+    \draw[->,thick] ([yshift=2.5cm]LLM.east) -- (R1.west) node[midway,above,sloped,font=\small] {rollout};
+    \draw[->,thick] (LLM.east) -- (R2.west) node[midway,above,sloped,font=\small] {rollout};
+    \draw[->,thick] ([yshift=-2.5cm]LLM.east) -- (RN.west) node[midway,above,sloped,font=\small] {rollout};
+
+    % 箭头：奖励到目标
+    \foreach \r in {R1,R2,RN}{
+      \draw[->,thick] (\r.east)--(J.west);
+    }
+    \node[font=\small,above] at ($(R2.east)!0.5!(J.west)$) {aggregate};
+
+    % 调整反馈循环箭头位置 (避免重叠)
+    \draw[->,thick] (J.south) |- ++(0,-3.0cm) -| (LLM.south) node[below=0.45cm of RN,font=\small]{backpropagation \& update policy};
+
+  \end{tikzpicture}
+  \vspace{0.2cm}
+  \caption{The framework for training a single LLM policy with multiple data classes and specialized reward models. Prompts from data classes $\mathcal{D}_k$ are used to generate trajectories (rollouts) with the policy $\pi$. Each trajectory is evaluated by its corresponding reward model $\RewardFunc_k$. The rewards are aggregated into a global objective function $J(\pi)$, which is then used to update the policy via backpropagation.}
+  \label{fig:multi-reward-framework}
+\end{figure}

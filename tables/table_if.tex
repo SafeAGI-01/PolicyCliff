@@ -1,0 +1,28 @@
+\begin{table}[h]
+\centering
+\caption{Performance comparison of base vs. \texttt{Reasoning-Oriented RL}. Arrows and colors indicate change relative to base model: ↑ (Green) for increase, ↓ (red) for decrease. Adapted from Table 4 in \cite{fu2025scaling}.}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{IF-HAcc} & \textbf{IF-SAcc} & \textbf{Corr-Acc} \\
+\midrule
+\textbf{Qwen2.5-1.5B} & 10.00 & 27.26 & 1.21 \\
+Reasoning-Oriented RL & \cellcolor{red!20}9.52 ↓ & \cellcolor{red!20}23.97 ↓ & \cellcolor{green!20}14.58 ↑ \\
+\midrule
+\textbf{Qwen2.5-7B} & 15.95 & 33.13 & 13.59 \\
+Reasoning-Oriented RL & \cellcolor{red!20}10.48 ↓ & \cellcolor{red!20}27.26 ↓ & \cellcolor{green!20}28.39 ↑ \\
+\midrule
+\textbf{Qwen2.5-Math-1.5B} & 9.28 & 23.33 & 18.91 \\
+Reasoning-Oriented RL & \cellcolor{red!20}8.33 ↓ & \cellcolor{red!20}21.31 ↓ & \cellcolor{green!20}24.88 ↑ \\
+\midrule
+\textbf{Qwen2.5-Math-7B} & 9.76 & 23.53 & 20.68 \\
+Reasoning-Oriented RL & \cellcolor{red!20}7.85 ↓ & \cellcolor{red!20}22.62 ↓ & \cellcolor{green!20}32.61 ↑ \\
+\bottomrule
+\end{tabular}
+\label{tab:reasoning_coldRL}
+
+\vspace{0.5em}
+\noindent\begin{minipage}{0.95\linewidth}
+\small
+\textbf{Note.} \textit{Hard accuracy (IF-HAcc) and soft accuracy (IF-SAcc) assess whether the model output satisfies user-specified constraints. IF-HAcc equals 1 only if all constraints in a query are satisfied, while IF-SAcc measures the average satisfaction rate across all constraints. Average correctness accuracy (Corr-Acc) captures the correctness of the model’s final answer regardless of constraint satisfaction, based on matching with the ground-truth answer. Results are averaged over five math benchmarks: AIME2024, AIME2025, AMC2023, Minerva, and Olympiad.}
+\end{minipage}
+\end{table}

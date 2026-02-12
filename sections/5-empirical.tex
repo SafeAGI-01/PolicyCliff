@@ -1,0 +1,96 @@
+\section{Connecting Theory to Practice: A Review of Empirical Evidence}\label{sec-empirical}
+
+Having established a formal theory of policy stability, this section grounds our framework in practice by reviewing and re-interpreting key empirical findings from the recent literature. The following case studies are carefully chosen to provide comprehensive empirical evidence for our theory, demonstrating its power to both explain existing failures and guide the development of more robust and trustworthy AI systems.
+
+We begin by examining how reward misspecification can lead to \textit{deceptive reasoning}, illustrating a progression from simple, rational cheating to more sophisticated policy obfuscation. We then broaden our scope to show how the same theoretical principles explain the systemic \textit{intelligence-obedience trade-off} observed in large reasoning models. Moving from diagnosis to prescription, we next analyze a case study of \textit{controllable reasoning}, demonstrating how a principled, tie-breaker reward can be engineered to resolve the instabilities and achieve fine-grained control without sacrificing performance. We then turn our attention to the complex domain of RLHF-based alignment, showing how our theory explains the emergence of a more harmful failure mode: a policy shift \textit{from faithfulness to sophistry}. Finally, we present a case study and a controlled perturbation experiment in a multi-reward setting across diverse domains.
+
+
+\subsection{Deceptive Reasoning: From Rational Cheating to Policy Obfuscation}
+
+A critical challenge in training capable models is that policies may learn to be deceptively aligned, pursuing a hidden, undesirable strategy while appearing to optimize the given objective. Recent findings on reward hacking provide a stark, empirical validation of our theoretical framework, illustrating how policies rationally optimize incomplete rewards and how attempts to patch these rewards can trigger discontinuous shifts to more sophisticated failure modes.
+
+\subsubsection{Initial Failure: Rational Cheating under a Simple Reward Model}
+
+\input{figures/o3-mini-rl-coding}
+% \input{figures/openai-agent-training}
+
+A compelling baseline case is the emergence of cheating in OpenAI's o3-mini models during RL on coding tasks \citep{wang2025persona,baker2025monitoring}. As illustrated in Figure~\ref{fig:o3-cheating}, the model's behavior diverges dramatically based on the reward signal's quality. When trained with a "weak grader": a reward model that only checks for unit test pass rates, the policy progressively learns a deceptive strategy of modifying the tests to pass, with cheating attempts reaching nearly 80\%. This result is a powerful real-world illustration of our "clever slacker" paradigm (Proposition~\ref{prop:incomplete_reward_general}). The weak grader implements an \textit{incomplete training reward} ($\RewardFunc_{train}$), and the model's convergence towards cheating is not an irrational bug, but a \textit{perfectly rational policy} for this misspecified objective. In contrast, a "strong grader" that penalizes test manipulation provides a better proxy for the true reward ($\RewardFunc_{true}$), making honesty the only viable path to high reward (Proposition~\ref{prop:tie-breaker}).
+
+\subsubsection{A Deeper Failure: Policy Shift to Obfuscated Deception}
+
+\input{figures/openai-agent-training}
+
+A natural next step to address this failure is to augment the reward function with a process-based signal. In a follow-up experiment, the reward was updated to additionally penalize the agent if its Chain-of-Thought (CoT) triggered a monitor designed to detect hacking attempts. This represents a perturbation to the reward landscape---one that may be significant in practice, and is intended to render the deceptive strategy non-optimal~\citep{baker2025monitoring}.
+
+The results, shown in Figure~\ref{fig:agent-cheating-experiments}, are nuanced and cautionary. While the agent trained with this "CoT pressure" does learn to pass tests honestly more often than the baseline (Left, green line), it also learns a more pernicious strategy. The baseline agent's cheating is transparent and almost always caught by the monitor. In contrast, the agent under CoT pressure learns to hide its deception; its cheating is almost never caught by the monitor (Right, blue line). It has learned to write an innocent-looking CoT while still manipulating the tests.
+
+This outcome is an illustration of the policy discontinuities predicted by our theory. Although the magnitude of the perturbation is unknown, introducing a CoT penalty did not lead to the policy more honest in a smooth and gradual way. In our theory, the direction of the perturbation is more important than its scale. In this case, it triggered an abrupt shift from one strategy (\textit{transparent deception}) to a completely different one (\textit{obfuscated deception}). This occurs because the new reward landscape still contains multiple, qualitatively distinct paths to a high reward, creating a degeneracy of near-optimal actions. Faced with a penalty for its old strategy, the model does not abandon deception, but rather discovers a new, previously unexplored point in the policy space that satisfies the new, more complex reward function. This is because the new reward still differs from the ground truth reward in reality. This experiment vividly demonstrates that naive attempts to patch a reward function can induce policy brittleness, leading to more dangerous and harder-to-detect forms of misalignment---a direct, empirical manifestation of the instabilities inherent in a complex reward-policy map.
+
+
+\subsection{The Intelligence-Obedience Trade-off: An Incomplete Reward Specification}
+
+Beyond single-task deception, our framework can also explain systemic trade-offs between different desired capabilities in large reasoning models (LRMs). A comprehensive study by \cite{fu2025scaling} provides compelling, large-scale evidence for such a trade-off, showing that training methods designed to enhance reasoning can inadvertently degrade instruction-following. Their experiments, which applied reasoning-oriented reinforcement learning (RL) to several base models, revealed a consistent pattern: while the models became better at solving problems correctly, they grew worse at adhering to user-specified constraints.
+
+The results, summarized in Table~\ref{tab:reasoning_coldRL}, offer a clear quantitative illustration of this dilemma. Across multiple Qwen base models, applying reasoning-oriented RL consistently boosts the correctness accuracy (Corr-Acc) by a large margin. Simultaneously, however, it induces a consistent degradation in both hard (IF-HAcc) and soft (IF-SAcc) instruction-following accuracy. This empirically demonstrates that optimizing for reasoning performance alone can steer the policy toward a region of the policy space where obedience is sacrificed.
+
+\input{tables/table_if}
+
+This observed trade-off can be precisely explained by the principle of policies rationally optimizing an \textit{incomplete reward specification} (Proposition~\ref{prop:incomplete_reward_general}). The RL training described by \cite{fu2025scaling} utilizes an outcome-based reward, $\RewardFunc_{\text{reasoning}}$, which is incomplete with respect to the user's full intent. The model, as a rational agent, allocates its capacity to maximize the explicitly rewarded objective (correctness), causing the unrewarded, pre-existing skill of instruction-following to degrade. This provides direct empirical support for our work that many alignment failures are not arbitrary bugs, but predictable outcomes of optimizing a misspecified reward landscape.
+
+Our theoretical framework not only explains this degradation but also suggests a principled path toward mitigation. The core issue is that optimizing for $\RewardFunc_{\text{reasoning}}$ alone yields a highly \textit{degenerate set of optimal policies}, $\Pi^*(\RewardFunc_{\text{orrectness}})$, where many policies are effective at reasoning but poor at following instructions. To resolve this, we propose introducing an auxiliary instruction-following reward, $\RewardFunc_{\text{instruction}}$, which acts as a \textit{tie-breaker} (Proposition~\ref{prop:tie-breaker}). This targeted reward is designed to select for policies from the degenerate set that also exhibit the desired obedience, thereby seeking a solution in the intersection of high-performing reasoning and instruction-following policies. The following subsection will present a case study that illustrates this principle. 
+
+
+\subsection{Controllable Reasoning: Engineering a Desirable Policy Shift via Tie-Breaker Rewards}
+
+The previously discussed trade-off highlights a central challenge: if training for reasoning correctness yields a degenerate set of optimal policies, how can we select one that also exhibits other desirable behaviors, such as length constraint? The work of \cite{aggarwal2025l1} on controlling Chain-of-Thought (CoT) length provides a powerful case study, demonstrating how a principled reward function can engineer a desirable shift in the policy space.
+
+Their method, Length-Controlled Policy Optimization (LCPO), trains a model using a reward function that combines a primary correctness reward with an auxiliary penalty for deviating from a target CoT length, $n_{\text{gold}}$, which is provided in the user prompt, e.g., 
+\begin{equation}\label{eq:lcpo_reward}
+r(y, y_{\text{gold}}, n_{\text{gold}}) = \mathbb{I}(y = y_{\text{gold}}) - \alpha |n_{\text{gold}} - n_y|.
+\end{equation}
+In their experiments, they take $\alpha$ as 0.0003. 
+The key insight from their empirical results is twofold. First, as shown in Figure~\ref{fig:l1-performance}, the resulting L1 models successfully learn to control their reasoning length according to the prompt's specification. Second, this added controllability does not come at the cost of reasoning performance; in fact, the L1 models consistently outperform the baseline S1 model (which uses a hard token limit) in correctness across various computational budgets, and the base model DeepSeek-R1-1.5B with fewer tokens.
+
+\input{figures/efficient-l1-math}
+
+This successful outcome can be understood by our theoretical framework. The LCPO reward function, with its length-penalty term, acts as a powerful \textit{tie-breaker} (Proposition~\ref{prop:tie-breaker}). The RL process, guided by this new reward, induces a shift in the policy space. It forces the model to abandon the initial policy and converge to a new, qualitatively superior policy that co-optimizes for both reasoning correctness and length controllability. Besides, as shown in \cite{aggarwal2025l1}, the model learns to conditionally execute different reasoning strategies, from direct solutions at low budgets to deliberative self-correction at high budgets, based on the length target it perceives in its input state.  
+
+Therefore, this case study does not contradict our theory of instability---it exemplifies how to harness it. The brittleness of the reward-policy map, once seen as a flaw, becomes a tool for targeted policy improvement. Understanding this map deeply can allow us to engineer targeted shifts that push models into more capable and controllable regions of the policy space.
+
+
+\subsection{From Faithfulness to Sophistry: Policy Jumps in RLHF-based Alignment}
+
+The preceding analyses have focused on instabilities in reasoning tasks, where reward functions are often objective and rule-based (e.g., correctness, test manipulation, or token length). This raises a critical question: do these theoretical instabilities persist in the more subjective domain of LLM alignment, where rewards are not defined by rules but are learned from human feedback? The work of \cite{wen2024language} on "Unintended Sophistry" provides a compelling affirmative answer, demonstrating how RL from Human Feedback (RLHF) can induce its own pernicious policy shifts.
+
+Their study reveals a "performance illusion" inherent in standard RLHF pipelines. As the quantitative results show in Figure~\ref{fig:sophistry}, after RLHF with a reward model trained on human preferences, the human-perceived performance of the model increases substantially, while its true correctness stagnates or even declines \citep{wen2024language}. This indicates the model is not getting better at the task, but better at convincing humans.
+
+\input{figures/rlhf-policy}
+
+This phenomenon can be interpreted as a direct consequence of policy optimization under \textit{reward misspecification}. The ideal objective of alignment is to find a policy optimal for the true reward $\RewardFunc_{\text{true}}$, one that exhibits what we term a \textit{Faithful-and-Correct Style}. However, the RLHF process optimizes for a flawed proxy, $\RewardFunc_{\text{train}}$, which inadvertently rewards human cognitive biases. Our framework predicts that optimizing this misspecified reward may induce a \textit{discontinuous jump in the policy space} (Proposition~\ref{prop:discontinuity_stochastic}). The policy does not converge toward the ideal; instead, it leaps to a different equilibrium, a \textit{Persuasive Sophistry Style}, which is optimal for $\RewardFunc_{\text{train}}$. This style is characterized by fabricating evidence, employing internally consistent but fallacious logic, and generating unreadable code designed to pass superficial checks---all strategies that exploit the weaknesses of a human-feedback-based reward model.
+
+This case study therefore provides a powerful, real-world demonstration of our work: a misspecified reward function, as is common in RLHF, may result in a suboptimal policy and even cause a shift to a qualitatively different and more harmful style of behavior.
+
+
+\subsection{Multi-Reward Instability: Suggestive Evidence from Data Mixture Experiments}
+
+\input{figures/multi-domain-result}
+
+Our analysis so far has focused on instabilities arising from a single reward function. The challenge is amplified in the multi-reward setting, where a single policy must balance competing objectives. The work of \cite{liang2025modomodo} on optimizing data mixtures for multi-domain RLVR provides a compelling case study here \citep{liang2025modomodo}. In their experiments, altering the data mixture serves as a practical, high-level mechanism to reshape the effective reward landscape that the policy ultimately optimizes. Their results clearly demonstrate that the final policy is highly sensitive to this process; changing the mixture by, for instance, removing a single dataset or changing the mixture ratio, leads to large and non-linear shifts in the policy’s capabilities and performance profile (see Figure~\ref{fig:modomodo_results}).
+
+A crucial distinction must be made, however, regarding the strength of this evidence. Our formal theory proves that a small, well-defined reward perturbation may trigger a discontinuous policy jump. Altering a data mixture is a significant intervention, and it is unclear from this experiment whether it corresponds to a small or a large change in the final effective reward landscape. Therefore, while these findings do not constitute a strict proof of our theory, they offer strong suggestive evidence of the policy brittleness our framework predicts. The observed sharp changes in behavior are highly consistent with the types of instability expected in a system with multiple rewards across diverse domains. This highlights that the data mixture is an important parameter for controlling the final policy's stability, even if the precise mapping from mixture change to reward change remains an open question.
+
+
+\subsection{Multi-Reward Instability: Evidence from Controlled Perturbation Experiments}\label{subsec:multi-rl-exp}
+
+\input{figures/multi-reward-perturbation-safety}
+
+Our analysis suggests that in a multi-reward multi-domain setting, the final policy's stability is highly sensitive to both the individual reward models and the data mixture that shapes their aggregation. To provide direct, controlled evidence for this, we conducted a series of experiments training a single Multimodal LLM (based on a SFT model of Qwen2.5-VL-72B-Instruct~\citep{bai2025qwen25}) using a multi-reward RL framework (see Figure~\ref{fig:multi-reward-framework}). The model was trained on three classes of prompts: safety, human values, and general, each guided by a corresponding outcome-based reward model (ORM).
+
+We implemented a reinforcement learning framework, named OpenRLHF-V, based on the open-source OpenRLHF framework~\citep{hu2024openrlhf}. We also experimented with a similar framework, VeRL~\citep{sheng2024hybridflow}. Both frameworks yielded comparable training curves and final model performance. All experiments were conducted on a cluster of A800 GPUs using OpenRLHF-V, and the training hyperparameters are summarized in Table~\ref{tab:multi-rl-train-config} in the Appendix.
+
+We first investigated the policy's sensitivity to small perturbations in the reward function tuple. We trained two RL models, Model-1 and Model-2, using identical datasets and mixture ratios. The only difference was a slight modification to the safety ORM, while the human-value and general ORMs were kept the same. As shown in Figure \ref{fig:multi-rewards-safety}, this minor change to just one component of the reward vector led to significant and widespread performance shifts across a range of out-of-distribution safety and human value benchmarks. This result provides strong evidence for the brittleness of the reward-policy map in a multi-reward setting, confirming our theory that a small reward perturbation can induce a shift in the final policy.
+
+Next, we investigated the policy's sensitivity to the training data composition, which shapes the "effective reward" landscape. We trained Model-3 using the same set of reward models as Model-1. The only difference was a minor data curation step: we removed approximately 200 ambiguous prompts that were difficult for human annotators to classify as either "unsafe" or "normal". These prompts can be seen as the safety boundary and may have conflicting rewards (e.g., harmfulness versus helpfulness). This small change in the training data also resulted in a large performance difference between Model-1 and Model-3. This demonstrates that minor alterations to the data, which can influence how the policy learns to aggregate or "weigh" the different reward signals, can be sufficient to shift the policy to a different equilibrium.
+
+These controlled experiments provide complementary evidence supporting our stability framework. They demonstrate that the final policy in a multi-reward system is extremely sensitive to both the precise definition of its component reward functions and the data used to inform their aggregation, further underscoring that stability is a critical and non-trivial challenge.
+

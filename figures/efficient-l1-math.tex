@@ -1,0 +1,25 @@
+\begin{figure}[h!]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/efficient-L1-length.png}
+        \caption*{(a) Length control precision}
+    \end{minipage}\hfill
+    \begin{minipage}{0.5\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/efficient-L1-accuracy.png}
+        \caption*{(b) Reasoning performance vs. budget}
+    \end{minipage}
+    \caption{
+        Empirical validation of our tie-breaker framework, demonstrating how a principled reward design resolves the intelligence-obedience trade-off.
+        \textbf{(a)} The policy, trained with a length-penalizing reward, learns to precisely adhere to the target token budget specified in the prompt. 
+        \textbf{(b)} Crucially, this added controllability does not degrade reasoning performance; the L1 model consistently outperforms the S1 baseline across all budgets and the base model DeepSeek-R1-1.5B with fewer tokens. 
+        This outcome shows that by using a tie-breaker reward, RL can induce a desirable policy shift to a new region of the policy space where both high reasoning capability and instruction-following are achieved. Adapted from \cite{aggarwal2025l1}.
+    }
+    \label{fig:l1-performance}
+    \vspace{0.2em}
+    \noindent\begin{minipage}{\linewidth}
+        \footnotesize
+        \textbf{Note.} \textit{The performance reported in (b) is a macro-average over four math benchmarks: AMC, AIME, Olympiad-Bench, and MATH.}
+    \end{minipage}
+\end{figure}

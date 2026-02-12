@@ -1,0 +1,57 @@
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}[
+        node distance=3.2cm,
+        main node/.style={
+            rectangle, 
+            rounded corners=3mm, 
+            draw, 
+            thick, 
+            minimum width=3.2cm, 
+            minimum height=1.5cm, 
+            text centered, 
+            font=\Large
+        },
+        arrow_label/.style={
+            font=\small\sffamily, 
+            text centered
+        }
+    ]
+        % --- NODES WITH COLOR FILL ---
+        % Start node is neutral gray
+        \node[main node, fill=gray!15] (R) {$\RewardFunc$};
+        % Subsequent nodes match their corresponding arrow text color
+        \node[main node, right=of R, fill=blue!15] (Q) {$\OptQFunc_{\RewardFunc}$};
+        \node[main node, below=of Q, node distance=2.5cm, fill=red!15] (A) {$A^*(\cdot; \RewardFunc)$}; 
+        \node[main node, left=of A, fill=green!15] (pi) {$\OptPolicy_{\RewardFunc}$};
+
+        % --- ARROWS FOR THE Z-SHAPE FLOW ---
+        
+        % R -> Q Arrow
+        \draw[-{Latex[length=3mm]}, thick] (R) -- (Q) 
+            node[midway, above, arrow_label] {Bellman Operator}
+            node[midway, below, arrow_label, text=blue!60!black, align=center] 
+            {\textbf{Lipschitz Continuous} \\ (Prop.~\ref{prop:q_continuity})};
+
+        % Q -> A Arrow (Vertical)
+        \draw[-{Latex[length=3mm]}, thick] (Q) -- (A) 
+            node[midway, right, arrow_label, align=center, text width=2.5cm] {Argmax Operator \\
+            \color{red!80!black}{\textbf{Upper Hemi-Continuous} \\ (Lemma~\ref{lemma:argmax_uhc})}};
+            
+        % A -> pi Arrow (Right to Left)
+        \draw[-{Latex[length=3mm]}, thick] (A) -- (pi) 
+            node[midway, above, arrow_label] {Policy Selection}
+            node[midway, below, arrow_label, text=green!50!black, align=center] 
+            {\textbf{ (Dis-)Continuity} \\ (Sec.~\ref{subsec:cont-reward-policy} \& \ref{subsec:discont-reward-policy})};
+
+        % --- DASHED ARROWS from R to A ---
+        \draw[-{Latex[length=3mm]}, thick, dashed, gray] (R) -- (A);
+            
+        % --- DASHED ARROW from R to pi ---
+        \draw[-{Latex[length=3mm]}, thick, dashed, gray] (R) -- 
+            node[midway, above, sloped, font=\small\sffamily, black] {End-to-End Map} (pi);
+
+    \end{tikzpicture}
+    \caption{The analytical roadmap for the stability analysis of the reward-policy map. Our analysis proceeds from left to right, investigating the continuity properties at each step of the mapping: from the reward function ($\RewardFunc$) to the optimal Q-function ($\OptQFunc_{\RewardFunc}$), then to the set of optimal actions ($A^*$), and finally to the resulting optimal policy ($\OptPolicy_\RewardFunc$). The key insight is that the stability of the final policy hinges on the properties of the argmax correspondence.}
+    \label{fig:roadmap}
+\end{figure}

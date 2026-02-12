@@ -1,0 +1,169 @@
+\section{RL for LLMs With a Single Reward Model}\label{sec-llm}
+
+The theoretical framework for the continuity of the reward-policy map has significant implications for the training and behavior of large language models (LLMs), especially when fine-tuned using reinforcement learning (RL) such as Reinforcement Learning from Human Feedback (RLHF) (see e.g., \cite{ouyang2022training,bai2022constitutional,lee2023rlaif}) or Reinforcement Learning with Verifiable Rewards (RLVR) (see e.g., \cite{guo2025deepseek,su2025crossing}). In this section, we frame LLM text generation as an MDP and discuss how the continuity (or lack thereof) of the optimal policy with respect to the reward function can explain certain observed behaviors and challenges in LLM alignment.
+
+
+\subsection{Framing LLM Text Generation as an MDP}
+
+We model the sequential text generation process of an LLM as an infinite-horizon discounted Markov Decision Process (MDP) defined by the tuple $(\StateSpace, \ActionSpace, \TransKernel, \RewardFunc, \gamma)$. A rigorous analysis requires establishing a topology on the state and action spaces.
+
+The action space $\ActionSpace$ is the model's finite vocabulary, and the state space $\StateSpace$ comprises the finite set of all possible token sequences up to a maximum length $T_{\max}$. A fundamental property of any finite set endowed with a metric is that the resulting metric space is always compact. Therefore, the assumption that $\ActionSpace$ and $\StateSpace$ are compact metric spaces is automatically satisfied for any choice of metric. This assumption, while a necessary precondition for the general theory, thus poses no practical constraint on the LLM setting.
+
+A more subtle but crucial point arises from the topology of these finite spaces. Any metric on a finite set induces the discrete topology, in which every subset is an open set. A direct mathematical consequence of this is that any function from a space with the discrete topology to any other metric space is necessarily continuous. Thus, the assumption that the reward function $\RewardFunc(s, a)$ is continuous on the product space $(\StateSpace \times \ActionSpace, d)$ is also automatically satisfied for any reward function. This means that in the finite LLM setting, this assumption is not a restrictive simplification of reality but a direct consequence of the problem's structure.
+
+The remaining components of the MDP are then defined. The transition kernel $\TransKernel$ is deterministic, as the next state is formed by concatenating the current state with the chosen action token. Finally, the policy $\Policy(a|s)$ is embodied by the LLM, and the goal of reinforcement learning is to find an optimal policy $\OptPolicy_\RewardFunc$ for a given reward $\RewardFunc$.
+
+This precise framing reveals that the source of policy instability does not lie in a potential failure of continuity of the reward function on its domain. Instead, the analytical framework's power hinges on \textit{how perturbations in the reward function's values} propagate through the Bellman operator to the Q-function, and critically, how the non-continuous nature of the $\Argmax$ operator acts upon this Q-function. This formulation, therefore, shifts the focus from the topological properties of the state-action space, which are trivially satisfied, to the functional properties of the Bellman and $\Argmax$ operators. This provides a rigorous foundation for analyzing policy stability not as a failure of continuity on the state space, but as a consequence of the inherent discontinuity of optimization over a discrete action set.
+
+
+
+\subsection{Theoretical Implications of the Reward-Policy Map}
+
+The stability results for the underlying value functions provide a foundation for our analysis. Proposition~\ref{prop:q_continuity} establishes that the optimal action-value function $\OptQFunc_\RewardFunc$ is Lipschitz continuous with respect to the reward function $\RewardFunc$. This suggests a degree of robustness at the value level: small changes to the reward model lead to proportionally small and controlled changes in the optimal Q-values. Furthermore, Lemma~\ref{lemma:argmax_uhc} shows that the set of optimal actions $A^*(s; \RewardFunc)$ is an upper hemi-continuous (u.h.c.) correspondence. This crucial property provides a form of "outer" stability: it guarantees that the set of best next tokens will not suddenly expand to include actions that were previously far from optimal. It also ensures that any convergent sequence of optimal actions (for a converging sequence of reward functions) will have its limit within the new set of optimal actions. However, this provides no guarantee that every action that was originally optimal will remain part of the optimal set after a small perturbation of the reward function. A critical consequence of a correspondence being only upper hemi-continuous is that it permits the set of optimal actions $A^*(s; \RewardFunc)$ to \textit{abruptly shrink}. In other words, a slight change in $\RewardFunc$ can cause previously optimal actions to "disappear" by becoming strictly suboptimal. This lack of preservation, which corresponds to a failure of lower hemi-continuity (l.h.c.), is a primary driver of the policy instabilities central to our analysis.
+
+This is precisely the core issue: while the value function enjoys robust stability guarantees, these guarantees do not propagate to the policy level. The potential for the optimal action set to abruptly shrink means that any policy, which is fundamentally a selection from this set, is inherently fragile. Therefore, the stability of the policy itself becomes a far more delicate and critical property for predictable behavior. The continuity of the reward-policy map $M_{RL}: \RewardFunc \mapsto \OptPolicy_\RewardFunc$ depends heavily on the structure of the optimal action set.
+
+\paragraph{Conditions for Policy Continuity.}
+As established in Theorem~\ref{thm:continuity_rigorous}, if the optimal action is unique for a given reward function $\RewardFunc_0$ and all reward functions in its vicinity, then the mapping to this deterministic optimal policy is continuous. In an LLM context, this stable regime would mean that small adjustments to the reward model only lead to minor, predictable changes in text generation.
+
+\paragraph{Policy Discontinuities due to Non-Unique Optimal Actions.}
+The uniqueness condition is strong and often violated in language generation, where multiple words or phrases can be equally valid continuations. When multiple optimal actions exist, the policy map becomes prone to discontinuities, as shown in Propositions~\ref{prop:discontinuity_deterministic} and \ref{prop:discontinuity_stochastic}. A slight perturbation to the reward function can act as a tie-breaker, causing a deterministic policy to abruptly switch its choice of action or a stochastic policy to drastically shift its probability mass. This theoretical instability provides a formal basis for the brittle behaviors observed in practice, such as sudden changes in style or safety profile in response to minor changes in the reward model or prompt.
+
+\subsection{Analysis of Alignment and Reasoning Phenomena}
+
+The theoretical framework can be directly applied to formalize and explain specific, observable behaviors in aligned or reasoning LLMs. In particular, we now use our results to analyze two fundamental challenges when using RL for LLM training. First, we will examine phenomena arising from \textit{incomplete reward specifications}, where we formalize how a policy can be perfectly rational for its given objective yet suboptimal for the true, intended goal. Second, we will analyze behaviors stemming from the \textit{degeneracy of optima}, where multiple distinct policies are equally optimal, and show how introducing an additive reward component functions as a \textit{tie-breaker} to resolve this issue and enforce more specific behaviors.
+
+
+\subsubsection{The "Clever Slacker": Suboptimality from Incomplete Rewards}
+
+A common challenge in alignment and reasoning is the "clever slacker" phenomenon, where an LLM produces factually correct responses that nevertheless ignore user-specified constraints or instructions, or generates answers via deceptive shortcuts. This can be modeled as the agent optimizing an incomplete reward function. The following proposition proves that such a policy is strictly suboptimal under the complete, desired reward objective.
+
+\begin{proposition}[Suboptimality from Incomplete Rewards (General Form)] \label{prop:incomplete_reward_general}
+Let $\RewardFunc_{train} \in \RewardSpace$ be the training reward function and $\RewardFunc_{missing} \in \RewardSpace$ be the missing reward component. The true reward is $\RewardFunc_{true} = \RewardFunc_{train} + \RewardFunc_{missing}$. Let $\pi^*_{train} \in \Pi^*(\RewardFunc_{train})$ be any optimal policy for $\RewardFunc_{train}$, and let $\mu$ be the initial state distribution. If there exists a state $s_0 \in \StateSpace$ and an action $a_2 \in \ActionSpace$ satisfying:
+\begin{enumerate}
+    \item \textbf{Action Optimality}: $a_2$ is optimal under the training reward: $a_2 \in A^*(s_0; \RewardFunc_{train})$.
+    \item \textbf{Positive Advantage for Missing Reward}: The action $a_2$ has a strictly positive advantage under the missing reward component when evaluated with the policy $\pi^*_{train}$:
+    $$A^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0, a_2) > 0,$$
+    where the advantage is defined as $A^{\pi}_{R}(s, a) := Q^{\pi}_{R}(s, a) - V^{\pi}_{R}(s)$.
+    \item \textbf{State Reachability}: The state $s_0$ has a non-zero probability of being visited at some step when starting from the initial state distribution $\mu$ and following the policy $\pi^*_{train}$.
+\end{enumerate}
+Then, the policy $\pi^*_{train}$ is strictly suboptimal for the true reward function $\RewardFunc_{true}$.
+\end{proposition}
+\begin{proof}
+To prove that $\pi^*_{train}$ is strictly suboptimal for $\RewardFunc_{true}$, we invoke the Policy Improvement Theorem (see e.g., \cite{sutton1998reinforcement}). We show there exists an action whose value is strictly greater than the state-value achieved by the policy, which is a sufficient condition for suboptimality. We must show $Q^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0, a_2) > V^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0)$.
+
+Let's expand the advantage condition (Condition 2):
+$Q^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0, a_2) - V^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0) > 0$.
+Using the linearity of the value function for a fixed policy ($V^{\pi}_{R_1+R_2} = V^{\pi}_{R_1} + V^{\pi}_{R_2}$), we can write:
+$V^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0) = V^{\pi^*_{train}}_{\RewardFunc_{train}}(s_0) + V^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0)$.
+Since $\pi^*_{train}$ is optimal for $\RewardFunc_{train}$, $V^{\pi^*_{train}}_{\RewardFunc_{train}}(s_0) = V^*_{train}(s_0)$.
+So, $V^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0) = V^*_{train}(s_0) + V^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0)$.
+
+Now let's analyze the Q-value of taking action $a_2$:
+$Q^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0, a_2) = Q^{\pi^*_{train}}_{\RewardFunc_{train}}(s_0, a_2) + Q^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0, a_2)$.
+Since $\pi^*_{train}$ is optimal for $\RewardFunc_{train}$, $Q^{\pi^*_{train}}_{\RewardFunc_{train}} = \OptQFunc_{train}$. By Condition 1, $a_2 \in A^*(s_0; \RewardFunc_{train})$, so $\OptQFunc_{train}(s_0, a_2) = V^*_{train}(s_0)$.
+Thus, $Q^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0, a_2) = V^*_{train}(s_0) + Q^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0, a_2)$.
+
+We can now directly compare $Q^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0, a_2)$ with $V^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0)$. The inequality $Q^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0, a_2) > V^{\pi^*_{train}}_{\RewardFunc_{true}}(s_0)$ holds if and only if:
+$$ V^*_{train}(s_0) + Q^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0, a_2) > V^*_{train}(s_0) + V^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0). $$
+This simplifies to $Q^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0, a_2) > V^{\pi^*_{train}}_{\RewardFunc_{missing}}(s_0)$, which is exactly Condition 2 in its expanded form. Since the condition holds by hypothesis, this implies that $\pi^*_{train}$ is not an optimal policy for $\RewardFunc_{true}$.
+
+Furthermore, because Condition 3 ensures that state $s_0$ is reachable from the initial state distribution $\mu$, this local improvement opportunity at $s_0$ will lead to a strict increase in the overall expected return from the start states. Therefore, the policy $\pi^*_{train}$ is strictly suboptimal for the true reward function $\RewardFunc_{true}$.
+\end{proof}
+
+This formal result provides a unified lens to explain several critical alignment failures, which can be understood as policies that are optimal for an incomplete training objective but suboptimal for the true, desired objective. We analyze two such key phenomena below.
+
+\paragraph{Instruction Following Failure.}
+A primary application of our proposition is in explaining why models often fail to adhere to user-specified constraints, a behavior sometimes termed the "clever slacker" phenomenon. This occurs when the training reward, $\RewardFunc_{\text{train}}$, primarily measures a core task requirement, such as factual correctness, while ignoring secondary instructions like output format, style, or negative constraints. The adherence to these instructions represents the missing reward component, $\RewardFunc_{\text{missing}}$. If a model can produce a factually correct answer both with and without following the constraints, both paths may be equally optimal under $\RewardFunc_{\text{train}}$. The policy is therefore not being "disobedient"; it is perfectly rational in choosing the path of least resistance to maximize the objective it was given. This behavior is precisely captured by our proposition, which demonstrates that such a policy is strictly suboptimal under the true, complete reward function $\RewardFunc_{\text{true}} = \RewardFunc_{\text{train}} + \RewardFunc_{\text{missing}}$.
+
+\paragraph{Spurious Reasoning.}
+A more subtle and complex failure mode is \textit{spurious reasoning}, where the model produces a correct final answer preceded by a chain-of-thought that is logically flawed or not causally linked to the result. This is also a consequence of an incomplete Outcome-Based Reward (OBR). Here, the training reward $\RewardFunc_{\text{train}} = \RewardFunc_{\text{outcome}}$ only values the correctness of the final answer. The crucial missing component, $\RewardFunc_{\text{missing}} = \RewardFunc_{\text{process}}$, should reward the logical validity and faithfulness of the reasoning process itself. Because any reasoning path leading to the correct outcome is equally valued, the model may discover a low-effort strategy: first retrieve or guess the answer, and then generate a syntactically plausible but non-causal justification post-hoc. This policy, which fabricates a reasoning process, is another manifestation of a "clever slacker". While it perfectly optimizes the outcome-based objective, it is demonstrably suboptimal under the true objective that values faithful reasoning, as explained by our formal result.
+
+
+\subsubsection{The Tie-Breaker Effect: Resolving Degeneracy with Additive Rewards}
+
+A key challenge in reward design is the \textit{degeneracy of optimal policies}, which arises when a primary objective function, such as accuracy, deems multiple, behaviorally distinct policies to be equally optimal. This allows for undesirable behaviors, such as stylistic inconsistency or inefficient reasoning, to emerge. The practice of introducing an additional reward component is a form of \textit{reward engineering} designed to break this degeneracy. The following proposition formalizes how such an additive reward can function as a tie-breaker to enforce a specific, desired policy.
+
+\begin{proposition}[The Tie-Breaker Effect]\label{prop:tie-breaker}
+Let Assumptions \ref{assump:spaces}-\ref{assump:discount} hold. Let $\RewardFunc_0 \in \RewardSpace$ be a reward function, and suppose for some state $s_0 \in \StateSpace$, there exist at least two distinct optimal actions, $a_1, a_2 \in A^*(s_0; \RewardFunc_0)$. Then for any $\varepsilon>0$, there exists a perturbed reward function $\RewardFunc' \in \RewardSpace$ such that $\|\RewardFunc' - \RewardFunc_0\|_{\infty} \leq \varepsilon$ and $Q^*_{\RewardFunc'}(s_0, a_2) > Q^*_{\RewardFunc'}(s_0, a_1)$, i.e.\ \(a_2\) becomes strictly optimal over \(a_1\).
+\end{proposition}
+\begin{proof}
+Let \(Q_0=Q^*_{\RewardFunc_0}\).  Since \(a_1,a_2\) are both optimal at \(s_0\),
+\(Q_0(s_0,a_1)=Q_0(s_0,a_2)\).
+
+\noindent\textbf{1. Bump in \(Q\)-space.}
+Choose a continuous bump as Proposition~\ref{prop:discontinuity_deterministic} that 
+\[
+\varphi\in C(\StateSpace\times\ActionSpace),\quad
+0\le\varphi\le1,
+\quad
+\varphi(s_0,a_2)=1,
+\]
+and \(\varphi(s_0,a_j)=0\) for any other \(a_j\in A^*(s_0;\RewardFunc_0)\).  Define
+\[
+Q_{\varepsilon'}(s,a)=Q_0(s,a)+\varepsilon'\,\varphi(s,a),
+\]
+where \(\varepsilon'=\varepsilon/(1+\gamma)\), so \(\|Q_{\varepsilon'}-Q_0\|_\infty=\varepsilon'\to0\).
+
+\noindent\textbf{2. Invert the Bellman operator.}
+For any continuous \(Q\), define
+\[
+R_Q(s,a)
+=Q(s,a)
+-\gamma\!\int_{\StateSpace}\max_{a'}Q(s',a')\,P(ds'\!\mid s,a).
+\]
+Then one checks \(\BellmanOp_{R_Q}(Q)=Q\), and by contraction \(Q\) is the
+unique \(Q^*_{R_Q}\).  Hence for each \(\varepsilon>0\), let 
+\[
+\RewardFunc_\varepsilon=R_{\,Q_0+\varepsilon'\varphi}
+\]
+so that
+\[
+Q^*_{\RewardFunc_\varepsilon}
+=Q_0+\varepsilon'\,\varphi.
+\]
+
+\noindent\textbf{3. Convergence of rewards.}
+Since \(R_Q\) depends continuously (in sup-norm) on \(Q\) and
+\(\|Q_0+\varepsilon'\varphi-Q_0\|_\infty=\varepsilon'\), we have
+\(\|\RewardFunc_\varepsilon-\RewardFunc_0\|_\infty \le \varepsilon'(1+\gamma)= \varepsilon \to 0\).
+
+\noindent\textbf{4. Tie-breaking at \(s_0\).}
+Under \(Q^*_{\RewardFunc_\varepsilon}=Q_0+\varepsilon'\varphi\),
+\[
+Q^*_{\RewardFunc_\varepsilon}(s_0,a_2)
+-
+Q^*_{\RewardFunc_\varepsilon}(s_0,a_1)
+=
+\bigl[Q_0(s_0,a_2)-Q_0(s_0,a_1)\bigr]
++\varepsilon'\bigl[\varphi(s_0,a_2)-\varphi(s_0,a_1)\bigr]
+=0+\varepsilon'>0.
+\]
+Thus \(a_2\) is strictly preferred over \(a_1\). This completes the proof.
+\end{proof}
+
+
+The "tie-breaker" effect formalized in Proposition~\ref{prop:tie-breaker} is a powerful tool for reward engineering, explaining how additive rewards $\Delta\RewardFunc_0=\RewardFunc' - \RewardFunc_0$ can resolve the degeneracy of optima and enforce specific desired behaviors. We analyze two key applications below: enforcing format adherence and promoting efficient reasoning.
+
+\paragraph{Enforcing Format and Style Consistency.}
+Consider a scenario where multiple responses are equally valid under a base reward function, $\RewardFunc_0$, which primarily measures correctness. For example, an answer could be given in free-form text or as a structured JSON object. Both might be equally optimal, leading to a large optimal policy set $\optPolicySet(\RewardFunc_0)$. To enforce a specific format, one can introduce a small, additive "bonus" reward, $\Delta\RewardFunc_0=\RewardFunc' - \RewardFunc_0$, for responses that adhere to the desired structure. This bonus acts as a tie-breaker. According to our proposition, this additive reward makes the policy that generates the correctly formatted output strictly optimal. This can cause the model's behavior to "snap" discontinuously to the preferred style, rather than shifting gradually, which explains why such changes can be abrupt.
+
+\paragraph{Promoting Efficient Reasoning.}
+The tendency for models to generate unnecessarily verbose responses is another consequence of a degenerate optimal policy set under an accuracy-only reward, $\RewardFunc_0 = \RewardFunc_{\text{acc}}$. Both short and long reasoning paths that reach the correct answer are equally optimal. To solve this, one can introduce a length penalty, which is a \textit{negative} additive reward. This penalty also functions as a powerful tie-breaker. Among all paths that achieve the same accuracy reward, the most efficient path will now have the strictly highest value, as it incurs the lowest total penalty. This modification collapses the optimal policy set $\optPolicySet(\RewardFunc_0 + \Delta\RewardFunc_0)$ to contain only the most concise policies. By making the efficient policy uniquely optimal, this approach clarifies the learning signal and promotes a more efficient reasoning process.
+
+
+\subsection{Broader Implications and Mitigation Strategies}
+
+The analysis throughout this work highlights a fundamental distinction between applying reinforcement learning to LLMs versus traditional domains. In tasks with objective, well-defined rewards like the game of Go, achieving the optimal value $\ValueFunc^*$ is a sufficient goal; the policy is merely a means to an end. This paradigm shifts fundamentally for LLMs. The policy's output, i.e. the sequence of generated tokens, is the final product consumed by the user, and the reward function is not a ground-truth oracle but an imperfect proxy for nuanced human preferences (RLHF) or a rule-based function (RLVR). Consequently, the policy $\Policy$ itself must become a primary object of analysis. \textit{The continuity of the reward-policy map thus emerges as a critical diagnostic for the robustness and trustworthiness of the aligned model. In essence, for language models, the policy's behavior is not merely a means to an end; it is, in large part, the end itself.}
+
+Given this critical role of the policy, the potential for discontinuities, as established by our theoretical results, underscores a central challenge in LLM alignment. The brittleness often observed in model behavior can be seen as a direct consequence of these instabilities, which arise when multiple generation strategies are near-optimal under a flawed or incomplete reward model. This highlights the importance of carefully engineering the learning objective to mitigate these issues. A primary approach is to introduce regularization techniques that encourage policy smoothness and resolve the degeneracy of optima.
+
+In practice, the most prevalent form of such regularization is fine-tuning a pre-trained base model, $\basePolicy$, with a KL-divergence penalty. The objective is thus not merely to maximize the reward $\RewardFunc$, but to find a policy $\pi_{\text{RL}}$ that balances this with fidelity to the base model, governed by the objective:
+\begin{equation}
+\begin{aligned}
+J(\Policy) &=  \mathbb{E}_{\tau \sim \Policy} \left[ \sum_{t=0}^\infty \gamma^t \left( \RewardFunc(s_t, a_t) - \beta\mathcal{D}_{\mathrm{KL}}(\Policy(\cdot|s_t) \| \pi_{\text{base}}(\cdot|s_t)) \right) \right] \\
+& = \mathbb{E}_{\tau \sim \Policy} \left[ \sum_{t=0}^\infty \gamma^t \left( \RewardFunc(s_t, a_t) - \beta\log\frac{\Policy(a_t|s_t)}{\pi_{\text{base}}(a_t|s_t)} \right) \right].
+\end{aligned}
+\end{equation}
+This KL-divergence term serves a dual purpose. It preserves the vast linguistic knowledge of $\basePolicy$, preventing catastrophic forgetting. Furthermore, as our analysis has shown, it acts as a crucial \textit{tie-breaker} when the optimal policy set $\optPolicySet(\RewardFunc)$ is large, guiding the algorithm towards the optimal policy that is closest to the base model's inherent capabilities and stylistic biases. This provides a practical, albeit constrained, mechanism for managing the degeneracy of the optima that we have identified. Alongside regularizing towards a base policy, another powerful mitigation strategy is to directly promote policy stochasticity via \textit{entropy regularization}, which we will formalize in Section~\ref{subsec:Entropy_Regularization}.
+

@@ -1,0 +1,281 @@
+\section{Continuity Analysis of the Reward-Policy Map}\label{sec-rl}
+
+This section develops the core theoretical framework for analyzing the stability of reinforcement learning policies. We formally investigate the continuity of the mapping from a reward function, $\RewardFunc$, to a corresponding optimal policy, $\OptPolicy_\RewardFunc$. A central theme of our work is that the properties of this map are a critical determinant of the robustness and predictability of RL-trained agents. Our analysis proceeds by first establishing the foundational stability of the optimal Q-function with respect to the reward. This result is then used to analyze the continuity properties of the set of optimal actions, which allows us to derive the conditions under which the reward-policy map is continuous and, conversely, the conditions under which it becomes discontinuous.
+
+\subsection{Framework and Definitions}
+
+We consider a standard infinite-horizon discounted Markov Decision Process (MDP) defined by the tuple $(\StateSpace, \ActionSpace, \TransKernel, \RewardFunc, \gamma)$.
+\begin{assumption} \label{assump:spaces}
+The state space $\StateSpace$ and action space $\ActionSpace$ are compact metric spaces, endowed with their respective Borel $\sigma$-algebras $\B(\StateSpace)$ and $\B(\ActionSpace)$.
+\end{assumption}
+\begin{assumption} \label{assump:transition}
+The transition kernel $\TransKernel: \StateSpace \times \ActionSpace \to \PolicySpace(\StateSpace)$ is a stochastic kernel such that for any bounded continuous function $f \in \Cont(\StateSpace)$, the mapping $(s, a) \mapsto \int_{\StateSpace} f(s') \TransKernel(ds'|s, a)$ is continuous on $\StateSpace \times \ActionSpace$.
+\end{assumption}
+\begin{assumption} \label{assump:discount}
+The discount factor $\gamma \in [0, 1)$.
+\end{assumption}
+
+The reward function $\RewardFunc: \StateSpace \times \ActionSpace \to \R$ determines the immediate reward. We consider the space of reward functions $\RewardSpace$ to be the Banach space $\Cont(\StateSpace \times \ActionSpace)$ of continuous functions on $\StateSpace \times \ActionSpace$, equipped with the supremum norm $\SupNorm{\RewardFunc} = \sup_{(s,a) \in \StateSpace \times \ActionSpace} |\RewardFunc(s, a)|$.
+
+A policy $\Policy: \StateSpace \to \mathcal{P}(\ActionSpace)$ is a stochastic kernel satisfying appropriate measurability conditions. Let $\PolicySpace$ denote the space of all such policies. The continuity of the reward-policy map, which is the central subject of our analysis, depends critically on the topology endowed upon this policy space $\PolicySpace$. Since our results will cover different types of policies (e.g., deterministic versus stochastic), we will specify the relevant topology in the context of each theorem to ensure maximum clarity and precision.
+
+For any given policy $\Policy$ and reward function $\RewardFunc \in \RewardSpace$, its performance is quantified by the state-value function $$V^{\Policy}_{\RewardFunc}(s) = \mathbb{E}_{\Policy}\left[\sum_{t=0}^\infty \gamma^t \RewardFunc(s_t, a_t) \mid s_0=s \right],$$ representing the expected total discounted reward obtained by starting in state s and subsequently following policy $\Policy$.
+
+The optimal action-value function $\OptQFunc_\RewardFunc \in \Cont(\StateSpace \times \ActionSpace)$ is the unique fixed point of the Bellman optimality operator $\BellmanOp_\RewardFunc$:
+\begin{equation} \label{eq:bellman_q}
+(\BellmanOp_\RewardFunc Q)(s, a) = \RewardFunc(s, a) + \gamma \int_{\StateSpace} \max_{a' \in \ActionSpace} Q(s', a') \TransKernel(ds' | s, a).
+\end{equation}
+The existence and uniqueness of $\OptQFunc_\RewardFunc$ follows from the Banach fixed-point theorem, as $\BellmanOp_\RewardFunc$ is a contraction mapping on $\Cont(\StateSpace \times \ActionSpace)$ with modulus $\gamma$.
+
+The set of optimal actions at state $s$ for a reward function $\RewardFunc$ is given by the argmax correspondence:
+\begin{equation} \label{eq:argmax_set}
+A^*(s; \RewardFunc) = \Argmax_{a \in \ActionSpace} \OptQFunc_\RewardFunc(s, a).
+\end{equation}
+An optimal policy $\OptPolicy_\RewardFunc$ is any policy $\Policy \in \PolicySpace$ such that for all $s \in \StateSpace$, the support of the measure $\Policy(\cdot | s)$ is contained within $A^*(s; \RewardFunc)$. Let $\Pi^*(\RewardFunc) \subseteq \PolicySpace$ denote the set of all optimal policies for $\RewardFunc$.
+
+Our analysis centers on the continuity of the mapping from the reward function $\RewardFunc$ to a corresponding optimal policy. This can be viewed either as the continuity properties of the set-valued map $\RewardFunc \mapsto \Pi^*(\RewardFunc)$ or, more commonly, by defining a specific selection rule $f: \RewardSpace \to \PolicySpace$ such that $f(\RewardFunc) = \OptPolicy_\RewardFunc \in \Pi^*(\RewardFunc)$, and analyzing the continuity of this single-valued map $f$. We denote this map by $M_{RL}: \RewardSpace \to \PolicySpace$. Our analytical approach, visualized in Figure~\ref{fig:roadmap}, is to decompose this overall map and sequentially investigate the properties of each constituent mapping: from the reward function $\RewardFunc$ to the optimal Q-function $\OptQFunc_{\RewardFunc}$, then to the set of optimal actions $A^*$, and ultimately to the selected policy $\OptPolicy_{\RewardFunc}$.
+
+\input{figures/roadmap-continuity}
+
+\subsection{Continuity of the Optimal Value Function}
+
+The foundation for analyzing the policy map's continuity lies in the stability of the optimal Q-function with respect to changes in the reward function. This is a standard result in dynamic programming, see e.g., \cite{lecarpentier2021lipschitz}.
+
+\begin{proposition} \label{prop:q_continuity}
+Let Assumptions \ref{assump:spaces}-\ref{assump:discount} hold. The mapping $\RewardFunc \mapsto \OptQFunc_\RewardFunc$ from $(\RewardSpace, \SupNorm{\cdot})$ to $(\Cont(\StateSpace \times \ActionSpace), \SupNorm{\cdot})$ is Lipschitz continuous with constant $1/(1-\gamma)$. That is, for any $\RewardFunc_1, \RewardFunc_2 \in \RewardSpace$,
+\begin{equation}
+\SupNorm{\OptQFunc_{\RewardFunc_1} - \OptQFunc_{\RewardFunc_2}} \le \frac{1}{1-\gamma} \SupNorm{\RewardFunc_1 - \RewardFunc_2}.
+\end{equation}
+\end{proposition}
+\begin{proof}
+Let $Q_1 = \OptQFunc_{\RewardFunc_1}$ and $Q_2 = \OptQFunc_{\RewardFunc_2}$. By definition, $Q_1 = \BellmanOp_{\RewardFunc_1} Q_1$ and $Q_2 = \BellmanOp_{\RewardFunc_2} Q_2$. Then,
+\begin{align*}
+|Q_1(s, a) - Q_2(s, a)| &= |(\BellmanOp_{\RewardFunc_1} Q_1)(s, a) - (\BellmanOp_{\RewardFunc_2} Q_2)(s, a)| \\
+&= \left| \RewardFunc_1(s, a) - \RewardFunc_2(s, a) + \gamma \int_{\StateSpace} \left( \max_{a'} Q_1(s', a') - \max_{a'} Q_2(s', a') \right) \TransKernel(ds' | s, a) \right| \\
+&\le |\RewardFunc_1(s, a) - \RewardFunc_2(s, a)| + \gamma \int_{\StateSpace} \left| \max_{a'} Q_1(s', a') - \max_{a'} Q_2(s', a') \right| \TransKernel(ds' | s, a).
+\end{align*}
+Using the inequality $|\max f - \max g| \le \sup |f - g| = \SupNorm{f - g}$, we have
+\begin{align*}
+|Q_1(s, a) - Q_2(s, a)| &\le \SupNorm{\RewardFunc_1 - \RewardFunc_2} + \gamma \int_{\StateSpace} \SupNorm{Q_1 - Q_2} \TransKernel(ds' | s, a) \\
+&\le \SupNorm{\RewardFunc_1 - \RewardFunc_2} + \gamma \SupNorm{Q_1 - Q_2}.
+\end{align*}
+Taking the supremum over $(s, a)$ yields $\SupNorm{Q_1 - Q_2} \le \SupNorm{\RewardFunc_1 - \RewardFunc_2} + \gamma \SupNorm{Q_1 - Q_2}$, which rearranges to the desired result.
+\end{proof}
+
+\subsection{Analysis of the Argmax Correspondence}
+
+The stability of the optimal policy map is critically dependent on the behavior of the set of optimal actions $A^*(s; \RewardFunc) = \Argmax_{a \in \ActionSpace} \OptQFunc_\RewardFunc(s, a)$. We analyze this set-valued map (or correspondence) $\RewardFunc \mapsto A^*(\cdot; \RewardFunc)$. The result is a direct application of Berge's Maximum Theorem, see e.g., \cite{berge1963topological} and \cite{AliprantisBorder2006InfiniteDimAnalysis}.
+
+
+
+\begin{lemma} \label{lemma:argmax_uhc}
+Let Assumptions \ref{assump:spaces}-\ref{assump:discount} hold. For each fixed $s \in \StateSpace$, the argmax correspondence $\Phi_s: \RewardSpace \twoheadrightarrow \ActionSpace$ defined by $\Phi_s(\RewardFunc) = A^*(s; \RewardFunc)$ has the following properties:
+\begin{enumerate}
+    \item $\Phi_s(\RewardFunc)$ is non-empty and compact for each $\RewardFunc \in \RewardSpace$.
+    \item $\Phi_s$ is upper hemi-continuous (u.h.c.) from $(\RewardSpace, \SupNorm{\cdot})$ to the space of compact subsets of $\ActionSpace$, where the latter is endowed with the topology induced by the Hausdorff metric.
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+\textbf{1. Non-empty and compact values}: 
+    Under Assumptions \ref{assump:spaces}-\ref{assump:discount}, it is a standard result that the Bellman optimality operator $\BellmanOp_\RewardFunc$ maps the space of bounded continuous functions $\Cont(\StateSpace \times \ActionSpace)$ to itself. As established by the Banach fixed-point theorem, its unique fixed point, $\OptQFunc_\RewardFunc$, must therefore be an element of this space, i.e., $\OptQFunc_\RewardFunc \in \Cont(\StateSpace \times \ActionSpace)$. Thus, for any fixed $\RewardFunc \in \RewardSpace$ and $s \in \StateSpace$, the function $a \mapsto \OptQFunc_\RewardFunc(s, a)$ is continuous on the action space $\ActionSpace$.Since $\ActionSpace$ is compact (Assumption \ref{assump:spaces}), the Weierstrass Extreme Value Theorem ensures that $\OptQFunc_\RewardFunc(s, \cdot)$ attains its maximum on $\ActionSpace$. Therefore, the set of maximizers $A^*(s; \RewardFunc)$ is non-empty.
+    Furthermore, because $\OptQFunc_\RewardFunc(s, \cdot)$ is continuous, the set $A^*(s; \RewardFunc)$ can be written as $\{a \in \ActionSpace \mid \OptQFunc_\RewardFunc(s, a) = \max_{a' \in \ActionSpace} \OptQFunc_\RewardFunc(s, a') \}$, which is a closed subset of the compact space $\ActionSpace$. A closed subset of a compact space is compact. Thus, $A^*(s; \RewardFunc)$ is compact-valued.
+
+\textbf{2. Upper hemi-continuity}:
+    We prove u.h.c. using the sequential characterization: $\Phi_s$ is u.h.c. at $\RewardFunc_0 \in \RewardSpace$ if for any sequence $(\RewardFunc_n)_{n \in \N}$ in $\RewardSpace$ converging to $\RewardFunc_0$ (i.e., $\SupNorm{\RewardFunc_n - \RewardFunc_0} \to 0$), and for any sequence $(a_n)_{n \in \N}$ in $\ActionSpace$ such that $a_n \in A^*(s; \RewardFunc_n)$ for all $n$ and $a_n \to a_0$ for some $a_0 \in \ActionSpace$, it must follow that $a_0 \in A^*(s; \RewardFunc_0)$. This is equivalent to showing that the graph of the correspondence is closed, which for compact-valued correspondences with a compact range space ($\ActionSpace$) implies u.h.c. (see e.g., \cite{AliprantisBorder2006InfiniteDimAnalysis}, Theorem 17.11 and 17.31).
+
+    Let $(\RewardFunc_n)_{n \in \N}$ be a sequence in $\RewardSpace$ such that $\RewardFunc_n \to \RewardFunc_0$. Let $(a_n)_{n \in \N}$ be a sequence in $\ActionSpace$ such that $a_n \in A^*(s; \RewardFunc_n)$ for each $n$, and assume $a_n \to a_0$ in $\ActionSpace$.
+    By definition of $a_n \in A^*(s; \RewardFunc_n)$, we have:
+    \begin{equation} \label{eq:an_optimality}
+    \OptQFunc_{\RewardFunc_n}(s, a_n) \ge \OptQFunc_{\RewardFunc_n}(s, a) \quad \text{for all } a \in \ActionSpace.
+    \end{equation}
+    We want to show that $a_0 \in A^*(s; \RewardFunc_0)$, i.e., $\OptQFunc_{\RewardFunc_0}(s, a_0) \ge \OptQFunc_{\RewardFunc_0}(s, a)$ for all $a \in \ActionSpace$.
+
+    Consider the term $\OptQFunc_{\RewardFunc_n}(s, a_n)$. We have:
+    \begin{align*}
+    |\OptQFunc_{\RewardFunc_n}(s, a_n) - \OptQFunc_{\RewardFunc_0}(s, a_0)| \le |\OptQFunc_{\RewardFunc_n}(s, a_n) - \OptQFunc_{\RewardFunc_0}(s, a_n)| + |\OptQFunc_{\RewardFunc_0}(s, a_n) - \OptQFunc_{\RewardFunc_0}(s, a_0)|.
+    \end{align*}
+    The first term on the right-hand side satisfies $|\OptQFunc_{\RewardFunc_n}(s, a_n) - \OptQFunc_{\RewardFunc_0}(s, a_n)| \le \SupNorm{\OptQFunc_{\RewardFunc_n} - \OptQFunc_{\RewardFunc_0}}$. By Proposition \ref{prop:q_continuity}, $\SupNorm{\OptQFunc_{\RewardFunc_n} - \OptQFunc_{\RewardFunc_0}} \to 0$ as $\RewardFunc_n \to \RewardFunc_0$.
+    For the second term, since $\OptQFunc_{\RewardFunc_0}(s, \cdot)$ is continuous on $\ActionSpace$ (as $\OptQFunc_{\RewardFunc_0} \in \Cont(\StateSpace \times \ActionSpace)$) and $a_n \to a_0$, it follows that $|\OptQFunc_{\RewardFunc_0}(s, a_n) - \OptQFunc_{\RewardFunc_0}(s, a_0)| \to 0$.
+    Therefore, $\lim_{n \to \infty} \OptQFunc_{\RewardFunc_n}(s, a_n) = \OptQFunc_{\RewardFunc_0}(s, a_0)$.
+
+    Now, for any fixed $a \in \ActionSpace$, consider the right-hand side of inequality (\ref{eq:an_optimality}), $\OptQFunc_{\RewardFunc_n}(s, a)$. Since $\SupNorm{\OptQFunc_{\RewardFunc_n} - \OptQFunc_{\RewardFunc_0}} \to 0$, we have $\lim_{n \to \infty} \OptQFunc_{\RewardFunc_n}(s, a) = \OptQFunc_{\RewardFunc_0}(s, a)$.
+
+    Taking the limit as $n \to \infty$ in inequality (\ref{eq:an_optimality}), we obtain:
+    $$ \OptQFunc_{\RewardFunc_0}(s, a_0) \ge \OptQFunc_{\RewardFunc_0}(s, a) \quad \text{for all } a \in \ActionSpace. $$
+    This implies that $a_0 \in \Argmax_{a \in \ActionSpace} \OptQFunc_{\RewardFunc_0}(s, a)$, i.e., $a_0 \in A^*(s; \RewardFunc_0)$.
+    This argument directly establishes that the graph of the correspondence $\Phi_s$ is closed. Since the range space $\ActionSpace$ is a compact Hausdorff space, the closed graph property is equivalent to upper hemi-continuity. Thus, the upper hemi-continuity of $\Phi_s$ is proven.
+\end{proof}
+
+\begin{remark}
+The sequential definition of upper hemi-continuity used in the proof is: if $(\RewardFunc_n, a_n)$ is a sequence in the graph of the correspondence (i.e., $a_n \in A^*(s; \RewardFunc_n)$) such that $\RewardFunc_n \to \RewardFunc_0$ and $a_n \to a_0$, then $(\RewardFunc_0, a_0)$ must also be in the graph (i.e., $a_0 \in A^*(s; \RewardFunc_0)$). This is indeed the definition of a closed graph correspondence. For correspondences into a compact Hausdorff space (like $\ActionSpace$), the closed graph property is equivalent to upper hemi-continuity and the correspondence being closed-valued (hence compact-valued since $\ActionSpace$ is compact) (cf. \cite{AliprantisBorder2006InfiniteDimAnalysis}, Theorem 17.11). The u.h.c. property is fundamental, but it does not imply lower hemi-continuity (l.h.c.) nor the continuity of arbitrary single-valued selections from $A^*(s; \RewardFunc)$. Discontinuities in policy maps often arise when $A^*(s; \RewardFunc)$ is not l.h.c., which is typical when the set of maximizers changes its structure (e.g., its cardinality or dimension).
+\end{remark}
+
+
+
+
+
+
+\subsection{Conditions for Continuity of the Reward-Policy Map}\label{subsec:cont-reward-policy}
+
+The continuity of a specific policy map $M_{RL}: \RewardFunc \mapsto \OptPolicy_\RewardFunc$ depends critically on whether the optimal action is unique.
+
+\begin{theorem}[Continuity of Deterministic Optimal Policy Map under Uniqueness] \label{thm:continuity_rigorous}
+Let Assumptions \ref{assump:spaces}-\ref{assump:discount} hold. Let $\RewardFunc_0 \in \RewardSpace$. Suppose there exists an open neighborhood $\mathcal{N}(\RewardFunc_0) \subset \RewardSpace$ of $\RewardFunc_0$ such that for all $\RewardFunc \in \mathcal{N}(\RewardFunc_0)$ and all $s \in \StateSpace$, the set of optimal actions $A^*(s; \RewardFunc)$ is a singleton, denoted $\{a^*(s; \RewardFunc)\}$. Let $\PolicySpace_{det}$ be the space of all functions $\pi: \StateSpace \to \ActionSpace$. Define the policy map $M_{RL}: \mathcal{N}(\RewardFunc_0) \to \PolicySpace_{det}$ by setting $M_{RL}(\RewardFunc) = \pi_\RewardFunc$, where $\pi_\RewardFunc(s) = a^*(s; \RewardFunc)$ for all $s \in \StateSpace$.
+Equip $\PolicySpace_{det}$ with the topology of pointwise convergence: a sequence $(\pi_n)_{n \in \N}$ in $\PolicySpace_{det}$ converges to $\pi \in \PolicySpace_{det}$ if for every $s \in \StateSpace$, $\MetricAction(\pi_n(s), \pi(s)) \to 0$ as $n \to \infty$. Then the map $M_{RL}$ is continuous at $\RewardFunc_0$.
+\end{theorem}
+
+\begin{proof}
+We want to show that if $(\RewardFunc_n)_{n \in \N}$ is a sequence in $\mathcal{N}(\RewardFunc_0)$ such that $\RewardFunc_n \to \RewardFunc_0$ in the $\SupNorm{\cdot}$ topology, then $M_{RL}(\RewardFunc_n) \to M_{RL}(\RewardFunc_0)$ in the topology of pointwise convergence.
+Let $\pi_n = M_{RL}(\RewardFunc_n)$ and $\pi_0 = M_{RL}(\RewardFunc_0)$. By the definition of $M_{RL}$, this means $\pi_n(s) = a^*(s; \RewardFunc_n)$ and $\pi_0(s) = a^*(s; \RewardFunc_0)$.
+The convergence $\pi_n \to \pi_0$ requires that for every $s \in \StateSpace$, $\MetricAction(a^*(s; \RewardFunc_n), a^*(s; \RewardFunc_0)) \to 0$ as $n \to \infty$.
+
+Fix an arbitrary $s \in \StateSpace$. Consider the correspondence $\Phi_s: \RewardSpace \twoheadrightarrow \ActionSpace$ defined by $\Phi_s(\RewardFunc) = A^*(s; \RewardFunc)$.
+By Lemma \ref{lemma:argmax_uhc}, $\Phi_s$ is upper hemi-continuous (u.h.c.) and its values $A^*(s; \RewardFunc)$ are non-empty compact subsets of $\ActionSpace$.
+By the hypothesis of the theorem, for all $\RewardFunc \in \mathcal{N}(\RewardFunc_0)$, $\Phi_s(\RewardFunc) = \{a^*(s; \RewardFunc)\}$ is a singleton.
+
+According to a standard result in the theory of correspondences (e.g., \cite{AliprantisBorder2006InfiniteDimAnalysis}, Lemma 17.6), a compact-valued, u.h.c. correspondence that is single-valued on an open set (by hypothesis the maximizer is unique on $\mathcal{N}(\RewardFunc_0)$) is continuous as a single-valued function on that open set. Specifically, let $f_s: \mathcal{N}(\RewardFunc_0) \to \ActionSpace$ be the function defined by $f_s(\RewardFunc) = a^*(s; \RewardFunc)$ (this is well-defined as $A^*(s; \RewardFunc)$ is a singleton on $\mathcal{N}(\RewardFunc_0)$). Since $\Phi_s$ is u.h.c. and single-valued on the open set $\mathcal{N}(\RewardFunc_0)$, $f_s$ is continuous on $\mathcal{N}(\RewardFunc_0)$.
+
+Therefore, for each fixed $s \in \StateSpace$, since $\RewardFunc_n \to \RewardFunc_0$ and $\RewardFunc_n \in \mathcal{N}(\RewardFunc_0)$ (for $n$ sufficiently large, as $\mathcal{N}(\RewardFunc_0)$ is a neighborhood of $\RewardFunc_0$), the continuity of $f_s$ at $\RewardFunc_0$ implies that $f_s(\RewardFunc_n) \to f_s(\RewardFunc_0)$. This translates to $a^*(s; \RewardFunc_n) \to a^*(s; \RewardFunc_0)$ in $\ActionSpace$ (i.e., $\MetricAction(a^*(s; \RewardFunc_n), a^*(s; \RewardFunc_0)) \to 0$).
+
+Since this holds for every $s \in \StateSpace$, it follows by definition that $M_{RL}(\RewardFunc_n) \to M_{RL}(\RewardFunc_0)$ in the topology of pointwise convergence.
+Thus, $M_{RL}$ is continuous at $\RewardFunc_0$.
+\end{proof}
+
+\begin{remark}[Measurability of the Optimal Policy]
+For $\pi_\RewardFunc$ to be a well-defined policy, the map $s \mapsto a^*(s; \RewardFunc)$ should be measurable. Given the continuity of $Q^*_R$ (if $R$ is continuous and $P$ has Feller properties, $\OptQFunc_\RewardFunc$ is continuous on $S \times A$) and the uniqueness assumption, $s \mapsto a^*(s;R)$ will generally be measurable.
+\end{remark}
+
+
+\subsection{Conditions for Discontinuity of the Reward-Policy Map}\label{subsec:discont-reward-policy}
+
+When the optimal action is not unique, discontinuity of the policy map is generally expected.
+
+
+\begin{proposition}[Discontinuity under Non-Uniqueness for Deterministic Policies] \label{prop:discontinuity_deterministic}
+Let Assumptions \ref{assump:spaces}-\ref{assump:discount} hold. Suppose for $\RewardFunc_0 \in \RewardSpace$, there exists a state $s_0 \in \StateSpace$ such that the set of optimal actions $A^*(s_0; \RewardFunc_0)$ is finite and contains at least two distinct actions, say $a_1, a_2 \in A^*(s_0; \RewardFunc_0)$ with $a_1 \neq a_2$. Let $M_{RL}: \RewardSpace \to \PolicySpace$ be a policy map that selects a deterministic policy $\OptPolicy_\RewardFunc$ such that $\OptPolicy_\RewardFunc(s) \in A^*(s; \RewardFunc)$ for all $s \in \StateSpace$ (e.g., the selection rule for $M_{RL}(\RewardFunc_0)$ results in $\OptPolicy_{\RewardFunc_0}(s_0) = a_1$), then the map $M_{RL}$ is discontinuous at $\RewardFunc_0$ under the topology of pointwise convergence for policies (i.e., $\Policy_n \to \Policy$ if $\MetricAction(\Policy_n(s), \Policy(s)) \to 0$ for all $s$).
+\end{proposition}
+
+
+\begin{proof}
+This proof demonstrates discontinuity directly by constructing a sequence of reward functions $(\RewardFunc_\varepsilon)_{\varepsilon>0}$ that converges to $\RewardFunc_0$, yet for which the optimal policy discontinuously switches from $a_1$ to $a_2$ at state $s_0$ for any $\varepsilon > 0$.
+
+The core of this proof is a shift in perspective: instead of perturbing the reward function $\RewardFunc$ and analyzing its complex effect on the optimal Q-function $\OptQFunc$, we will directly define a perturbed optimal Q-function $\QFunc_\varepsilon$ and then use the Bellman equation to find the reward function $\RewardFunc_\varepsilon$ that generates it.
+
+\noindent\textbf{1. Construct a Perturbation in the Q-Function Space}
+
+Let $Q_0 = \OptQFunc_{\RewardFunc_0}$. By assumption, $Q_0(s_0, a_1) = Q_0(s_0, a_2)$. We first define a continuous "bump" function $\varphi \in \Cont(\StateSpace \times \ActionSpace)$ with the following properties:
+\begin{itemize}
+    \item $0 \le \varphi(s,a) \le 1$ for all $(s,a)$.
+    \item $\varphi(s_0, a_2) = 1$.
+    \item $\varphi(s_0, a_j) = 0$ for all $a_j\neq a_2$ and $a_j\in A^*(s_0; \RewardFunc_0)$.
+\end{itemize}
+Such a function exists and can be constructed as Lemma \ref{lem:bump_properties}. Alternatively, since $\StateSpace\times\ActionSpace$ is a compact (hence normal) metric space, the Urysohn Lemma can be invoked to produce a continuous function taking the value 1 on $\{(s_0,a_2)\}$ and vanishing outside any desired neighborhood of that point (see, e.g., \cite{munkres2000topology}, Theorem 33.1).
+
+
+For any $\varepsilon > 0$, we define a perturbed Q-function $\QFunc_\varepsilon$:
+\[
+\QFunc_\varepsilon(s,a) := Q_0(s,a) + \varepsilon\,\varphi(s,a).
+\]
+By construction, $\QFunc_\varepsilon$ is continuous and converges uniformly to $Q_0$ as $\varepsilon \to 0$, since $\|\QFunc_\varepsilon - Q_0\|_\infty = \varepsilon$.
+
+\noindent\textbf{2. Invert the Bellman Equation to Find the Corresponding Reward}
+
+For any given continuous function $\QFunc \in \Cont(\StateSpace \times \ActionSpace)$, we can define a corresponding reward function $\RewardFunc_Q$ as follows:
+\[
+\RewardFunc_Q(s,a) := \QFunc(s,a) - \gamma\int_{\StateSpace}\max_{a'}\QFunc(s',a')\,P(ds'\mid s,a).
+\]
+By substituting this definition into the Bellman optimality operator $\BellmanOp_{\RewardFunc_Q}$, we can verify that $\BellmanOp_{\RewardFunc_Q}(\QFunc) = \QFunc$. Since $\BellmanOp_{\RewardFunc_Q}$ is a contraction mapping with modulus $\gamma$, the Banach Fixed-Point Theorem guarantees that $\QFunc$ is its unique fixed point. Therefore, $\QFunc$ is the optimal Q-function for the reward $\RewardFunc_Q$, i.e., $\OptQFunc_{\RewardFunc_Q} = \QFunc$.
+
+Applying this inverse mapping to our perturbed function $\QFunc_\varepsilon$, we define a family of reward functions:
+\[
+\RewardFunc_\varepsilon := \RewardFunc_{Q_\varepsilon}.
+\]
+Through this construction, we can be sure that  $\OptQFunc_{\RewardFunc_\varepsilon} = \QFunc_\varepsilon$ for every $\varepsilon > 0$. Note that $\RewardFunc_\varepsilon$ is continuous and belongs to $\Cont(\StateSpace \times \ActionSpace)$, satisfying the continuity assumption.
+
+\noindent\textbf{3. Verify Convergence in the Reward Space}
+
+We must show that our constructed reward functions $\RewardFunc_\varepsilon$ converge to the original reward function $\RewardFunc_0$ as $\varepsilon \to 0$. Note that $\RewardFunc_0 = \RewardFunc_{Q_0}$.
+\begin{align*}
+\|\RewardFunc_\varepsilon - \RewardFunc_0\|_\infty &= \|\RewardFunc_{Q_\varepsilon} - \RewardFunc_{Q_0}\|_\infty \\
+&= \left\| \left(\QFunc_\varepsilon - \gamma \int\max_{a'}\QFunc_\varepsilon \right) - \left(Q_0 - \gamma \int\max_{a'}Q_0 \right) \right\|_\infty \\
+&= \left\| (\QFunc_\varepsilon - Q_0) - \gamma \left(\int\max_{a'}\QFunc_\varepsilon - \int\max_{a'}Q_0 \right) \right\|_\infty \\
+&\le \|\QFunc_\varepsilon - Q_0\|_\infty + \gamma \left\| \int\max_{a'}\QFunc_\varepsilon - \int\max_{a'}Q_0 \right\|_\infty.
+\end{align*}
+The map $Q \mapsto \max_{a'}Q(s',a')$ is Lipschitz continuous with constant 1. Thus,
+\[
+\left\| \int\max_{a'}\QFunc_\varepsilon - \int\max_{a'}Q_0 \right\|_\infty \le \sup_{s'}|\max_{a'}\QFunc_\varepsilon(s',a') - \max_{a'}Q_0(s',a')| \le \|\QFunc_\varepsilon - Q_0\|_\infty = \varepsilon.
+\]
+Substituting this back into the inequality, we get:
+\[
+\|\RewardFunc_\varepsilon - \RewardFunc_0\|_\infty \le \varepsilon + \gamma\varepsilon = \varepsilon(1+\gamma).
+\]
+As $\varepsilon \to 0$, it follows that $\|\RewardFunc_\varepsilon - \RewardFunc_0\|_\infty \to 0$. Thus, $\RewardFunc_\varepsilon$ converges to $\RewardFunc_0$.
+
+\noindent\textbf{4. The Action Switch and Discontinuity}
+
+We have constructed a sequence of rewards $\RewardFunc_\varepsilon$ that converges to $\RewardFunc_0$, with corresponding optimal Q-functions $\OptQFunc_{\RewardFunc_\varepsilon} = \QFunc_\varepsilon$. We now show that for any $\varepsilon > 0$, the action $a_2$ becomes the unique optimal action under the perturbed Q-function $\QFunc_\varepsilon$ at state $s_0$. We do this by comparing $a_2$ to all other possible actions.
+
+\textbf{Case 1: Comparison with other formerly optimal actions.}
+Let $a_j$ be any action in the original optimal set $A^*(s_0; \RewardFunc_0)$ such that $a_j \neq a_2$. Our construction of the bump function $\varphi$ ensures that $\varphi(s_0, a_2)=1$ and $\varphi(s_0, a_j)=0$.
+\begin{align*}
+\QFunc_\varepsilon(s_0, a_2) - \QFunc_\varepsilon(s_0, a_j) &= \bigl(Q_0(s_0, a_2) - Q_0(s_0, a_j)\bigr) + \varepsilon\bigl(\varphi(s_0, a_2) - \varphi(s_0, a_j)\bigr) \\
+&= 0 + \varepsilon(1 - 0) = \varepsilon.
+\end{align*}
+Since $\varepsilon > 0$, $a_2$ becomes strictly preferred over all other actions that were optimal under $\RewardFunc_0$.
+
+\textbf{Case 2: Comparison with formerly suboptimal actions.}
+Let $a'$ be any action not in the original optimal set, i.e., $a' \notin A^*(s_0; \RewardFunc_0)$. This means there is a suboptimality gap $\delta_{a'} := Q_0(s_0, a_2) - Q_0(s_0, a') > 0$.
+\begin{align*}
+\QFunc_\varepsilon(s_0, a_2) - \QFunc_\varepsilon(s_0, a') &= \bigl(Q_0(s_0, a_2) - Q_0(s_0, a')\bigr) + \varepsilon\bigl(\varphi(s_0, a_2) - \varphi(s_0, a')\bigr) \\
+&= \delta_{a'} + \varepsilon(1 - \varphi(s_0, a')).
+\end{align*}
+Since $\varepsilon > 0$ and $\varphi(s_0, a') \le 1$, the term $\varepsilon(1 - \varphi(s_0, a'))$ is non-negative. Thus,
+\[
+\QFunc_\varepsilon(s_0, a_2) - \QFunc_\varepsilon(s_0, a') \ge \delta_{a'} > 0.
+\]
+This shows that $a_2$ is also strictly preferred over all actions that were already suboptimal.
+
+Combining both cases, we have proven that for any $\varepsilon > 0$, $a_2$ is the unique maximizer of $\QFunc_\varepsilon(s_0, \cdot)$. Therefore, the optimal action set for $\RewardFunc_\varepsilon$ at $s_0$ is the singleton $A^*(s_0; \RewardFunc_\varepsilon) = \{a_2\}$.
+
+This means the policy map must select $\OptPolicy_{\RewardFunc_\varepsilon}(s_0) = a_2$. We have a sequence of rewards $\RewardFunc_\varepsilon \to \RewardFunc_0$, but the corresponding policy selection jumps from $\OptPolicy_{\RewardFunc_0}(s_0) = a_1$ to $\OptPolicy_{\RewardFunc_\varepsilon}(s_0) = a_2$. This demonstrates a failure of pointwise convergence, proving that the map $M_{RL}$ is discontinuous at $\RewardFunc_0$.
+\end{proof}
+
+
+\begin{proposition}[Discontinuity for Uniform Stochastic Policies] \label{prop:discontinuity_stochastic}
+Let Assumptions \ref{assump:spaces}-\ref{assump:discount} hold. Suppose for $\RewardFunc_0 \in \RewardSpace$, there exists a state $s_0 \in \StateSpace$ such that the set of optimal actions $A^*(s_0; \RewardFunc_0)$ is finite and contains at least two distinct actions. Let $m = |A^*(s_0; \RewardFunc_0)| \ge 2$.
+Let the policy map $M_{RL}: \RewardSpace \to \PolicySpace$ be defined by selecting the stochastic policy $\OptPolicy_\RewardFunc$ such that for each $s \in \StateSpace$, $\OptPolicy_\RewardFunc(\cdot | s)$ is the uniform probability distribution over the set $A^*(s; \RewardFunc)$. (If $A^*(s; \RewardFunc)$ is empty, which should not happen for optimal policies derived from Q-functions on compact action spaces, or infinite, this definition would need refinement; here we rely on the construction yielding finite sets).
+Then the map $\RewardFunc \mapsto \OptPolicy_\RewardFunc(\cdot | s_0)$, viewed as a map from $(\RewardSpace, \SupNorm{\cdot})$ to $(\PolicySpace(\ActionSpace), d_{TV})$, where $d_{TV}$ is the Total Variation distance, is discontinuous at $\RewardFunc_0$.
+\end{proposition}
+
+\begin{proof}
+Let $Q_0 = \OptQFunc_{\RewardFunc_0}$. By assumption, $A^*(s_0; \RewardFunc_0)$ is a finite set with $m = |A^*(s_0; \RewardFunc_0)| \ge 2$. Let $a_2 \in A^*(s_0; \RewardFunc_0)$ be one of these optimal actions.
+The policy $\OptPolicy_{\RewardFunc_0}(\cdot | s_0)$ is the uniform distribution over $A^*(s_0; \RewardFunc_0)$. Thus, for any $a \in A^*(s_0; \RewardFunc_0)$, $\OptPolicy_{\RewardFunc_0}(a | s_0) = 1/m$. For $a \notin A^*(s_0; \RewardFunc_0)$, $\OptPolicy_{\RewardFunc_0}(a | s_0) = 0$.
+
+We use the same sequence of reward functions $\RewardFunc_\varepsilon$ as constructed in the proof of Proposition \ref{prop:discontinuity_deterministic}. 
+We have $\RewardFunc_\varepsilon \to \RewardFunc_0$ in $(\RewardSpace, \SupNorm{\cdot})$.
+From the proof of Proposition \ref{prop:discontinuity_deterministic}, we established that the optimal action set for $\RewardFunc_\varepsilon$ is $A^*(s_0; \RewardFunc_\varepsilon) = \{a_2\}$. Let $\RewardFunc_n=\RewardFunc_{\varepsilon_n}$ for a sequence $\varepsilon_n\to 0$.
+
+According to our policy selection rule, $\OptPolicy_{\RewardFunc_n}(\cdot | s_0)$ is the uniform distribution over $A^*(s_0; \RewardFunc_n) = \{a_2\}$. This means $\OptPolicy_{\RewardFunc_n}(\cdot | s_0)$ is the Dirac measure $\delta_{a_2}$ concentrated at $a_2$. So, $\OptPolicy_{\RewardFunc_n}(a_2 | s_0) = 1$, and $\OptPolicy_{\RewardFunc_n}(a | s_0) = 0$ for all $a \neq a_2$.
+
+We now compute the Total Variation distance $d_{TV}(\OptPolicy_{\RewardFunc_n}(\cdot | s_0), \OptPolicy_{\RewardFunc_0}(\cdot | s_0))$ for $n$ sufficiently large. Let $\mu_n = \OptPolicy_{\RewardFunc_n}(\cdot | s_0) = \delta_{a_2}$ and $\mu_0 = \OptPolicy_{\RewardFunc_0}(\cdot | s_0)$.
+The Total Variation distance between two probability measures $\nu_1, \nu_2$ on a countable (or finite, as is the case here for the support of $\mu_0$ and $\mu_n$) set $\ActionSpace'$ is given by $d_{TV}(\nu_1, \nu_2) = \frac{1}{2} \sum_{a \in \ActionSpace'} |\nu_1(a) - \nu_2(a)|$.
+Here, $\ActionSpace'$ can be taken as $A^*(s_0; \RewardFunc_0) \cup \{a_2\} = A^*(s_0; \RewardFunc_0)$ since $a_2 \in A^*(s_0; \RewardFunc_0)$.
+\begin{align*}
+d_{TV}(\mu_n, \mu_0) &= \frac{1}{2} \sum_{a \in A^*(s_0; \RewardFunc_0)} |\mu_n(a) - \mu_0(a)| \\
+&= \frac{1}{2} \left( |\mu_n(a_2) - \mu_0(a_2)| + \sum_{a \in A^*(s_0; \RewardFunc_0), a \neq a_2} |\mu_n(a) - \mu_0(a)| \right) \\
+&= \frac{1}{2} \left( |1 - 1/m| + \sum_{a \in A^*(s_0; \RewardFunc_0), a \neq a_2} |0 - 1/m| \right).
+\end{align*}
+There are $m-1$ terms in the sum. So,
+\begin{align*}
+d_{TV}(\mu_n, \mu_0) = \frac{1}{2} \left( \frac{m-1}{m} + (m-1) \cdot \frac{1}{m} \right) = \frac{1}{2} \frac{2(m-1)}{m} = \frac{m-1}{m}. % = \frac{1}{2} \left( \frac{m-1 + m-1}{m} \right) 
+\end{align*}
+Since $m \ge 2$, we have $(m-1)/m \ge 1/2$.
+Thus, for $n$ sufficiently large, $d_{TV}(\OptPolicy_{\RewardFunc_n}(\cdot | s_0), \OptPolicy_{\RewardFunc_0}(\cdot | s_0)) = (m-1)/m$.
+As $(m-1)/m$ does not tend to $0$ as $n \to \infty$ (it is a constant $\ge 1/2$), the sequence of policies $\OptPolicy_{\RewardFunc_n}(\cdot | s_0)$ does not converge to $\OptPolicy_{\RewardFunc_0}(\cdot | s_0)$ in Total Variation distance.
+Therefore, the map $\RewardFunc \mapsto \OptPolicy_\RewardFunc(\cdot | s_0)$ is discontinuous at $\RewardFunc_0$.
+\end{proof}
+
+
+\begin{remark}
+This analysis highlights that the mapping from rewards to optimal policies exhibits stability (continuity) only under strong structural conditions ensuring the uniqueness of optimal actions. In the absence of such conditions, the mapping is generally unstable, with small perturbations in the reward function potentially leading to abrupt changes in the optimal policy. This has significant implications for the robustness and practical implementation of reinforcement learning algorithms.
+\end{remark}

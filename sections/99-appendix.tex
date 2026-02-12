@@ -1,0 +1,126 @@
+\newpage
+
+\appendix
+
+
+\section{Related Work}
+% \renewcommand{\thesubsection}{\Alph{subsection}}
+% \subsection{Additional Proofs}\label{appendix-a}
+
+\paragraph{Stability in Reinforcement Learning.}
+
+A significant body of research in reinforcement learning theory focuses on the policy optimization process, analyzing convergence to optimality and the sample efficiency of various algorithms~\citep{sutton1998reinforcement,puterman2005markov}. While it has been empirically observed and acknowledged in prior studies that learned policies may be sensitive to small perturbations in the reward function~\citep{wirth2017survey,wang2020reinforcement,banihashem2021defense,gupta2023behavior}, a formal analysis of this instability has been less explored. Our work addresses this gap by providing a rigorous mathematical analysis of the reward-policy map itself. Using tools from functional analysis, we prove that policy discontinuities are an inherent property of the optimization landscape, arising naturally when multiple actions are optimal or near-optimal. This perspective on inherent instability also provides a new lens through which to understand the role of widely-used regularization techniques. Prior works have typically explained their benefits from algorithmic or heuristic viewpoints: for instance, the KL-divergence penalty in PPO is viewed as a mechanism for stabilizing training updates~\citep{schulman2017proximal}, while entropy regularization is primarily seen as a method to encourage exploration~\citep{haarnoja2018soft}. Our work provides a more fundamental justification. We demonstrate that the KL-divergence penalty acts as a crucial tie-breaker among degenerate optimal policies, while proving that entropy regularization is not merely an exploration heuristic but a mathematical tool that restores Lipschitz continuity to the reward-policy map. It reveals these techniques to be not just algorithmic optimizations, but fundamental mechanisms for ensuring the mathematical stability of the learned policy.
+
+
+\paragraph{RL for LLM Alignment and Reasoning.}
+
+The application of reinforcement learning to the alignment and reasoning of Large Language Models (LLMs) has been propelled by a series of landmark empirical studies. Methodologies such as Reinforcement Learning from Human Feedback (RLHF)~\citep{ouyang2022training} and Constitutional AI~\citep{bai2022constitutional} established the practical viability of using RL to steer model behavior. This trend continues with the use of Reinforcement Learning with Verifiable Rewards (RLVR) in state-of-the-art large reasoning models, including OpenAI's o-series, Gemini 2.5, Grok 4, and DeepSeek-R1. Despite their empirical success, these RL-trained systems often exhibit a range of behavioral flaws. The literature documents phenomena such as "spurious reasoning" or "deceptive alignment", where a model fabricates justifications for answers produced via shortcuts~\citep{baker2025monitoring,wang2025persona,chen2025reasoning}, and "poor instruction-following fidelity", where models ignore details not directly enforced by the reward function~\citep{fu2025scaling}. While existing research typically addresses these failures with isolated empirical analyses, our work is distinct in providing a unified theoretical explanation. We demonstrate that these are not disparate bugs but rational behaviors that emerge from the inherent mathematical instability of the policy optimization process under incomplete or biased reward signals. 
+
+These challenges are amplified in settings where LLMs must balance multiple objectives, a common scenario in recent work on multi-reward RL across diverse domains~\citep{guo2025deepseek,liang2025modomodo,cheng2025revisiting}. Standard Multi-Objective Reinforcement Learning (MORL) traditionally seeks to compute an entire Pareto frontier of trade-off solutions for an external decision-maker~\citep{roijers2013survey}. Our approach differs, as LLMs typically operate under a single policy that must dynamically reconcile even conflicting goals, such as accuracy, safety, helpfulness and style, based solely on the input context. We model this complex training regime by proposing a state-dependent effective reward, which represents the agent's internal, context-sensitive aggregation of multiple reward signals. By formalizing this as a mapping from various reward components to a unified objective, we can apply the same functional-analytic tools to characterize the stability of the resulting policy in these complex, multi-objective environments.
+
+
+\section{Limitations}
+
+The principal contribution of this work is a novel theoretical framework for analyzing policy stability. While our framework is motivated by and helps explain observed empirical phenomena in Large Language Models (LLMs), the analysis itself remains primarily theoretical. It currently lacks systematic empirical validation designed to quantitatively test the theory's predictions regarding reward-policy stability.
+
+Furthermore, while our analysis provides a new theoretical foundation for the stabilizing effect of entropy regularization, proving that it can restore continuity to the reward-policy map. However, beyond these theoretical insights, we do not yet offer  novel algorithmic designs or actionable engineering guidelines. Bridging this gap between theory and practice, through rigorous empirical investigation and the development of novel algorithms (e.g. process-based reward modeling (PRM), chain-of-thought (CoT) reward monitoring, uncertainty quantification in reward models, and environment-interaction-based reward design), remains a critical direction for future research.
+
+
+\section{Appendix on Additional Proofs}
+
+\subsection{A Construction of the Bump Function}
+
+\begin{lemma}\label{lem:bump_properties}
+Let $(\StateSpace,\!d_{\StateSpace})$ and $(\ActionSpace,\!d_{\ActionSpace})$ be compact metric spaces and endow the product 
+$\StateSpace\times\ActionSpace$ with the product metric 
+$
+d_{SA}\bigl((s,a),(s',a')\bigr)
+=\max\!\bigl\{d_{\StateSpace}(s,s'),\,d_{\ActionSpace}(a,a')\bigr\}.
+$
+For $\delta>0$ define the \emph{bump}  
+\[
+\varphi_{\delta}(s,a)
+\;=\;
+\max\!\left\{0,\,1-\frac{d_{SA}\bigl((s,a),(s_0,a_2)\bigr)}{\delta}\right\},
+\quad(s,a)\in \StateSpace\times\ActionSpace.
+\]
+Then $\varphi_{\delta}$ is continuous and bounded in $[0,1]$.
+\end{lemma}
+
+\begin{proof}
+The map $(s,a)\mapsto d_{SA}\bigl((s,a),(s_0,a_2)\bigr)$ is continuous on the compact product space.  
+The function 
+$
+x\mapsto\max\{0,1-x/\delta\}
+$
+is continuous on $\R$.  Composition preserves continuity, hence
+$\varphi_{\delta}\in\Cont(\StateSpace\times\ActionSpace)$.  
+Moreover  
+$0\le \varphi_{\delta}(s,a)\le 1$ for all $(s,a)$, and 
+$
+\varphi_{\delta}(s_0,a_2)=1,
+$
+so $\|\varphi_{\delta}\|_\infty = 1$.
+\end{proof}
+
+
+\subsection{Proof of the Lipschitz Property of the Softmax Function}
+
+\begin{lemma}\label{lem:Lipschitz_properties_softmax}
+Let $\pi: \R^d \to \R^d$ be the softmax function with temperature $\alpha > 0$, defined as $\pi_i(x) = \frac{\exp(x_i/\alpha)}{\sum_{j=1}^d \exp(x_j/\alpha)}$ for $x \in \R^d$. The function $\pi(x)$ is Lipschitz continuous from the space $(\R^d, \|\cdot\|_{\infty})$ to $(\R^d, \|\cdot\|_{1})$, with a Lipschitz constant of at most $1/\alpha$. That is, for any $x, y \in \R^d$:
+$$\|\pi(x) - \pi(y)\|_1 \le \frac{1}{\alpha} \|x - y\|_{\infty}.$$
+\end{lemma}
+
+\begin{proof}
+Let $f(x) = \pi(x)$. By the Mean Value Theorem for vector-valued functions, for any $x, y \in \R^d$:
+$$\|f(x) - f(y)\|_1 \le \sup_{t \in [0,1]} \|J_f(y + t(x-y))\|_{(\infty, 1)} \cdot \|x-y\|_{\infty},$$
+where $J_f(z)$ is the Jacobian matrix of $f$ at point $z$, and $\|J_f\|_{(\infty, 1)}$ is the induced operator norm for mappings from $(\R^d, \|\cdot\|_{\infty})$ to $(\R^d, \|\cdot\|_{1})$. This norm is defined as:
+$$\|J_f\|_{(\infty, 1)} = \sup_{\|v\|_{\infty} \le 1} \|J_f v\|_1.$$
+
+First, we compute the entries of the Jacobian matrix $J_f(x)$. The partial derivatives are:
+$$(J_f)_{ij} = \frac{\partial \pi_i}{\partial x_j} = \frac{1}{\alpha} \pi_i (\delta_{ij} - \pi_j),$$
+where $\delta_{ij}$ is the Kronecker delta.
+
+Next, we evaluate the action of the Jacobian on a vector $v \in \R^d$ such that $\|v\|_\infty \le 1$. The $i$-th component of the resulting vector $J_f v$ is:
+\begin{align}
+(J_f v)_i &= \sum_{j=1}^d (J_f)_{ij} v_j = \sum_{j=1}^d \frac{1}{\alpha} \pi_i (\delta_{ij} - \pi_j) v_j \\
+&= \frac{1}{\alpha} \pi_i \left( \sum_{j=1}^d \delta_{ij} v_j - \sum_{j=1}^d \pi_j v_j \right) \\
+&= \frac{1}{\alpha} \pi_i (v_i - \bar{v}),
+\end{align}
+where we define $\bar{v} := \sum_{k=1}^d \pi_k v_k$.
+
+Now, we compute the $L_1$-norm of $J_f v$:
+$$\|J_f v\|_1 = \sum_{i=1}^d |(J_f v)_i| = \sum_{i=1}^d \left| \frac{1}{\alpha} \pi_i (v_i - \bar{v}) \right| = \frac{1}{\alpha} \sum_{i=1}^d \pi_i |v_i - \bar{v}|,$$
+since $\pi_i > 0$ and $\alpha > 0$.
+
+To find the operator norm, we must maximize $\Phi(v, \pi) := \sum_{i=1}^d \pi_i |v_i - \bar{v}|$ over all $v$ with $\|v\|_{\infty} \le 1$. The function $\Phi$ is convex in $v$, so its maximum over the compact convex set (the hypercube $\|v\|_\infty \le 1$) must be achieved at one of its vertices. The vertices of this hypercube are vectors $v$ with components $v_i \in \{-1, 1\}$.
+
+Let us fix such a vector $v$. Let $S = \{i \mid v_i = 1\}$, and let $p = \sum_{i \in S} \pi_i$. Then $\sum_{i \notin S} \pi_i = 1 - p$. The weighted average $\bar{v}$ becomes:
+$$\bar{v} = \sum_{i \in S} \pi_i (1) + \sum_{i \notin S} \pi_i (-1) = p - (1-p) = 2p - 1.$$
+
+We can now express $\Phi$ in terms of $p$:
+\begin{align}
+\Phi(v, \pi) &= \sum_{i \in S} \pi_i |1 - (2p-1)| + \sum_{i \notin S} \pi_i |-1 - (2p-1)| \\
+&= \sum_{i \in S} \pi_i |2 - 2p| + \sum_{i \notin S} \pi_i |-2p| \\
+&= (2-2p) \sum_{i \in S} \pi_i + 2p \sum_{i \notin S} \pi_i \quad \text{(since } p \in [0,1]) \\
+&= 2(1-p)p + 2p(1-p) \\
+&= 4p(1-p).
+\end{align}
+
+The function $g(p) = 4p(1-p)$ for $p \in [0,1]$ has a maximum value of $1$, which is achieved at $p = 1/2$. Thus, the maximum value of $\Phi(v, \pi)$ is at most $1$. This implies:
+$$\|J_f(x)\|_{(\infty, 1)} = \sup_{\|v\|_{\infty} \le 1} \frac{1}{\alpha} \Phi(v, \pi) \le \frac{1}{\alpha}.$$
+This bound is tight and holds for any $x \in \R^d$.
+
+Finally, substituting this uniform bound back into the Mean Value Theorem inequality, we get:
+$$\|\pi(x) - \pi(y)\|_1 \le \frac{1}{\alpha} \|x - y\|_{\infty}.$$
+This completes the proof.
+\end{proof}
+
+
+\section{Appendix on Experimental Details of Multi-RL Setting}
+
+
+The training hyperparameters used in the experiments described in Section~\ref{subsec:multi-rl-exp} are summarized in Table~\ref{tab:multi-rl-train-config}. All experiments were conducted on a cluster of A800 GPUs using OpenRLHF-V framework.
+
+\input{tables/table_multi_rl_train}
+
