@@ -49,7 +49,7 @@ Policy stability in multi-reward settings depends on:
 
 We prove that entropy regularization **restores Lipschitz continuity** to the reward-policy map:
 
-$$d_{TV}(\pi^*_{\mathbf{R}_1,\alpha}(\cdot|s), \pi^*_{\mathbf{R}_2,\alpha}(\cdot|s)) \leq \frac{1}{2\alpha(1-\gamma)} \|\mathbf{R}_1 - \mathbf{R}_2\|_{\infty}$$
+$$d_{TV}(\pi^{*}_{\mathbf{R}_1,\alpha}(\cdot|s), \pi^{*}_{\mathbf{R}_2,\alpha}(\cdot|s)) \leq \frac{1}{2\alpha(1-\gamma)} \|\mathbf{R}_1 - \mathbf{R}_2\|_{\infty}$$
 
 This provides theoretical justification for the widespread use of entropy bonuses in LLM training.
 
@@ -123,11 +123,11 @@ This work advances policy-stability analysis from empirical heuristics towards a
 ## Citation
 
 ```bibtex
-@article{xu2025policycliff,
-  title={The Policy Cliff: A Theoretical Analysis of Reward-Policy Maps in Large Language Models},
+@article{xu2025policy,
+  title={The policy cliff: A theoretical analysis of reward-policy maps in large language models},
   author={Xu, Xingcheng},
-  year={2025},
-  institution={Shanghai Artificial Intelligence Laboratory}
+  journal={arXiv preprint arXiv:2507.20150},
+  year={2025}
 }
 ```
 
