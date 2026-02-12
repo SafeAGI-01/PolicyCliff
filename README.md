@@ -3,7 +3,7 @@
 **A Theoretical Analysis of Reward-Policy Maps in Large Language Models**
 
 [![Paper](https://img.shields.io/badge/Paper-PDF-red)](The-Policy-Cliff-Paper-2025.pdf)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## Overview
 
@@ -139,7 +139,7 @@ Email: xingcheng.xu18@gmail.com
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## Related Work
 
