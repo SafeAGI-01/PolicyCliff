@@ -49,7 +49,7 @@ Policy stability in multi-reward settings depends on:
 
 We prove that entropy regularization **restores Lipschitz continuity** to the reward-policy map:
 
-$$d_{TV}\bigl(\pi^*(\cdot|s; R_1,\alpha),\ \pi^*(\cdot|s; R_2,\alpha)\bigr) \leq \frac{1}{2\alpha(1-\gamma)} \|R_1 - R_2\|_\infty$$
+$$d_{TV}\bigl(\pi^{*}(\cdot|s; R_1,\alpha),\ \pi^{*}(\cdot|s; R_2,\alpha)\bigr) \leq \frac{1}{2\alpha(1-\gamma)} \|R_1 - R_2\|_{\infty}$$
 
 This provides theoretical justification for the widespread use of entropy bonuses in LLM training.
 
